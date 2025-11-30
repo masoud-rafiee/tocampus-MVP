@@ -236,7 +236,7 @@ vercel --prod
 
 ## 🤝 Contributing
 
-This is an academic project for CS-410 Software Engineering. For questions or suggestions, please contact the development team.
+This is an academic project for CS-410 Software Engineering, leading to become a Product to be worked on more broadly soon; For questions or suggestions, please contact the development team.
 
 ## 📄 License
 
@@ -248,7 +248,7 @@ Academic project - Bishop's University © 2025
 - Project: University Social & Event Platform
 - Course: CS-410 Software Engineering
 - Institution: Bishop's University
-- Date: January 2025
+- Date: Novemeber 2025
 
 ---
 
