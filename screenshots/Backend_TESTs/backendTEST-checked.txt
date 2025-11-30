@@ -1,0 +1,9 @@
+Category					Tests	Status
+Health Check				2		✅
+Authentication (FR1, FR2)	4		✅
+Protected Routes			3		✅
+Events (FR4, FR5)			2		✅
+Groups (FR7)				1		✅
+Announcements (FR6)		1		✅
+Notifications (FR12)		1		✅
+Staff Permissions (FR3)		2		✅

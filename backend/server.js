@@ -1045,6 +1045,24 @@ app.patch('/api/notifications/:id/read', authenticateToken, (req, res) => {
   res.json(notification);
 });
 
+// Root welcome page
+app.get('/', (req, res) => {
+  res.json({
+    name: 'ToCampus API',
+    version: '1.0.0',
+    status: 'running',
+    endpoints: {
+      health: '/health',
+      auth: '/api/auth/login, /api/auth/register',
+      events: '/api/events',
+      groups: '/api/groups',
+      announcements: '/api/announcements',
+      notifications: '/api/notifications'
+    },
+    frontend: 'http://localhost:3000'
+  });
+});
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
