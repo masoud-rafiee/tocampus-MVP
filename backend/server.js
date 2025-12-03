@@ -1076,13 +1076,19 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-// Initialize data and start server
+// Initialize data
 initializeData();
 
-app.listen(PORT, () => {
-  console.log(`ToCampus API server running on port ${PORT}`);
-  console.log(`Universities: ${DB.universities.size}`);
-  console.log(`Users: ${DB.users.size}`);
-  console.log(`Events: ${DB.events.size}`);
-  console.log(`Groups: ${DB.groups.size}`);
-});
+// Only start server if not in test mode
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+    console.log(`ToCampus API server running on port ${PORT}`);
+    console.log(`Universities: ${DB.universities.size}`);
+    console.log(`Users: ${DB.users.size}`);
+    console.log(`Events: ${DB.events.size}`);
+    console.log(`Groups: ${DB.groups.size}`);
+  });
+}
+
+// Export for testing
+module.exports = { app, DB };

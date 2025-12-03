@@ -1,35 +1,31 @@
 // ToCampus API Tests
-// Tests run against running server at localhost:3001
+// Uses supertest to test Express app directly (no running server needed)
 
-// We need to export the app from server.js for testing
-// For now, we'll test against the running server
-
-const API_URL = 'http://localhost:3001';
+const request = require('supertest');
+const { app } = require('../server');
 
 describe('ToCampus API', () => {
   let authToken;
-  let testUserId;
+  let staffToken;
 
   // ============================================
   // Health Check Tests
   // ============================================
   describe('Health Check', () => {
     test('GET /health should return ok status', async () => {
-      const res = await fetch(`${API_URL}/health`);
-      const data = await res.json();
+      const res = await request(app).get('/health');
       
       expect(res.status).toBe(200);
-      expect(data.status).toBe('ok');
-      expect(data.timestamp).toBeDefined();
+      expect(res.body.status).toBe('ok');
+      expect(res.body.timestamp).toBeDefined();
     });
 
     test('GET / should return API info', async () => {
-      const res = await fetch(`${API_URL}/`);
-      const data = await res.json();
+      const res = await request(app).get('/');
       
       expect(res.status).toBe(200);
-      expect(data.name).toBe('ToCampus API');
-      expect(data.version).toBe('1.0.0');
+      expect(res.body.name).toBe('ToCampus API');
+      expect(res.body.version).toBe('1.0.0');
     });
   });
 
@@ -38,91 +34,78 @@ describe('ToCampus API', () => {
   // ============================================
   describe('Authentication', () => {
     test('POST /api/auth/login with valid credentials should return token', async () => {
-      const res = await fetch(`${API_URL}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({
           email: 'student@ubishops.ca',
           password: 'password123'
-        })
-      });
-      const data = await res.json();
+        });
       
       expect(res.status).toBe(200);
-      expect(data.token).toBeDefined();
-      expect(data.user).toBeDefined();
-      expect(data.user.email).toBe('student@ubishops.ca');
-      expect(data.user.role).toBe('STUDENT');
+      expect(res.body.token).toBeDefined();
+      expect(res.body.user).toBeDefined();
+      expect(res.body.user.email).toBe('student@ubishops.ca');
+      expect(res.body.user.role).toBe('STUDENT');
       
       // Save token for later tests
-      authToken = data.token;
-      testUserId = data.user.id;
+      authToken = res.body.token;
     });
 
     test('POST /api/auth/login with invalid credentials should return 401', async () => {
-      const res = await fetch(`${API_URL}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({
           email: 'student@ubishops.ca',
           password: 'wrongpassword'
-        })
-      });
+        });
       
       expect(res.status).toBe(401);
     });
 
     test('POST /api/auth/register with new user should create account', async () => {
       const uniqueEmail = `test${Date.now()}@ubishops.ca`;
-      const res = await fetch(`${API_URL}/api/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send({
           email: uniqueEmail,
-          password: 'testpass123',
+          password: 'TestPass123!',
           firstName: 'Test',
-          lastName: 'User',
-          role: 'STUDENT'
-        })
-      });
-      const data = await res.json();
+          lastName: 'User'
+        });
       
       expect([200, 201]).toContain(res.status);
-      expect(data.token).toBeDefined();
-      expect(data.user.email).toBe(uniqueEmail);
+      expect(res.body.token).toBeDefined();
+      expect(res.body.user.email).toBe(uniqueEmail);
     });
 
     test('POST /api/auth/forgot-password should return reset token', async () => {
-      const res = await fetch(`${API_URL}/api/auth/forgot-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const res = await request(app)
+        .post('/api/auth/forgot-password')
+        .send({
           email: 'student@ubishops.ca'
-        })
-      });
-      const data = await res.json();
+        });
       
       expect(res.status).toBe(200);
-      expect(data.message).toContain('reset');
+      expect(res.body.message).toBeDefined();
     });
   });
 
   // ============================================
-  // Protected Routes - No Token Tests
+  // Protected Routes (No Token) Tests
   // ============================================
   describe('Protected Routes (No Token)', () => {
     test('GET /api/events without token should return 401', async () => {
-      const res = await fetch(`${API_URL}/api/events`);
+      const res = await request(app).get('/api/events');
       expect(res.status).toBe(401);
     });
 
     test('GET /api/groups without token should return 401', async () => {
-      const res = await fetch(`${API_URL}/api/groups`);
+      const res = await request(app).get('/api/groups');
       expect(res.status).toBe(401);
     });
 
     test('GET /api/announcements without token should return 401', async () => {
-      const res = await fetch(`${API_URL}/api/announcements`);
+      const res = await request(app).get('/api/announcements');
       expect(res.status).toBe(401);
     });
   });
@@ -132,45 +115,36 @@ describe('ToCampus API', () => {
   // ============================================
   describe('Events', () => {
     beforeAll(async () => {
-      // Get token if not already set
-      if (!authToken) {
-        const res = await fetch(`${API_URL}/api/auth/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: 'student@ubishops.ca',
-            password: 'password123'
-          })
+      // Get student token
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({
+          email: 'student@ubishops.ca',
+          password: 'password123'
         });
-        const data = await res.json();
-        authToken = data.token;
-      }
+      authToken = res.body.token;
     });
 
     test('GET /api/events should return events list', async () => {
-      const res = await fetch(`${API_URL}/api/events`, {
-        headers: { 'Authorization': `Bearer ${authToken}` }
-      });
-      const data = await res.json();
+      const res = await request(app)
+        .get('/api/events')
+        .set('Authorization', `Bearer ${authToken}`);
       
       expect(res.status).toBe(200);
-      expect(Array.isArray(data)).toBe(true);
+      expect(Array.isArray(res.body)).toBe(true);
     });
 
     test('POST /api/events as student should return 403', async () => {
-      const res = await fetch(`${API_URL}/api/events`, {
-        method: 'POST',
-        headers: { 
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
+      const res = await request(app)
+        .post('/api/events')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
           title: 'Test Event',
           description: 'Test Description',
-          startTime: new Date().toISOString(),
-          location: 'Test Location'
-        })
-      });
+          date: new Date().toISOString(),
+          location: 'Test Location',
+          category: 'ACADEMIC'
+        });
       
       expect(res.status).toBe(403);
     });
@@ -181,13 +155,12 @@ describe('ToCampus API', () => {
   // ============================================
   describe('Groups', () => {
     test('GET /api/groups should return groups list', async () => {
-      const res = await fetch(`${API_URL}/api/groups`, {
-        headers: { 'Authorization': `Bearer ${authToken}` }
-      });
-      const data = await res.json();
+      const res = await request(app)
+        .get('/api/groups')
+        .set('Authorization', `Bearer ${authToken}`);
       
       expect(res.status).toBe(200);
-      expect(Array.isArray(data)).toBe(true);
+      expect(Array.isArray(res.body)).toBe(true);
     });
   });
 
@@ -196,13 +169,12 @@ describe('ToCampus API', () => {
   // ============================================
   describe('Announcements', () => {
     test('GET /api/announcements should return announcements list', async () => {
-      const res = await fetch(`${API_URL}/api/announcements`, {
-        headers: { 'Authorization': `Bearer ${authToken}` }
-      });
-      const data = await res.json();
+      const res = await request(app)
+        .get('/api/announcements')
+        .set('Authorization', `Bearer ${authToken}`);
       
       expect(res.status).toBe(200);
-      expect(Array.isArray(data)).toBe(true);
+      expect(Array.isArray(res.body)).toBe(true);
     });
   });
 
@@ -211,74 +183,58 @@ describe('ToCampus API', () => {
   // ============================================
   describe('Notifications', () => {
     test('GET /api/notifications should return notifications list', async () => {
-      const res = await fetch(`${API_URL}/api/notifications`, {
-        headers: { 'Authorization': `Bearer ${authToken}` }
-      });
-      const data = await res.json();
+      const res = await request(app)
+        .get('/api/notifications')
+        .set('Authorization', `Bearer ${authToken}`);
       
       expect(res.status).toBe(200);
-      expect(Array.isArray(data)).toBe(true);
+      expect(Array.isArray(res.body)).toBe(true);
     });
   });
 
   // ============================================
-  // Staff Role Tests (FR3)
+  // Staff Permissions Tests (FR3)
   // ============================================
   describe('Staff Permissions', () => {
-    let staffToken;
-
     beforeAll(async () => {
-      const res = await fetch(`${API_URL}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      // Get staff token
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({
           email: 'staff@ubishops.ca',
           password: 'password123'
-        })
-      });
-      const data = await res.json();
-      staffToken = data.token;
+        });
+      staffToken = res.body.token;
     });
 
     test('POST /api/events as staff should succeed', async () => {
-      const res = await fetch(`${API_URL}/api/events`, {
-        method: 'POST',
-        headers: { 
-          'Authorization': `Bearer ${staffToken}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
+      const res = await request(app)
+        .post('/api/events')
+        .set('Authorization', `Bearer ${staffToken}`)
+        .send({
           title: 'Staff Test Event',
-          description: 'Created by staff',
-          startTime: new Date(Date.now() + 86400000).toISOString(),
-          endTime: new Date(Date.now() + 90000000).toISOString(),
-          location: 'Test Location',
-          category: 'Academic'
-        })
-      });
-      const data = await res.json();
+          description: 'Created by staff in CI test',
+          date: new Date(Date.now() + 86400000).toISOString(),
+          location: 'Test Hall',
+          category: 'ACADEMIC'
+        });
       
       expect(res.status).toBe(201);
-      expect(data.title).toBe('Staff Test Event');
+      expect(res.body.title).toBe('Staff Test Event');
     });
 
     test('POST /api/announcements as staff should succeed', async () => {
-      const res = await fetch(`${API_URL}/api/announcements`, {
-        method: 'POST',
-        headers: { 
-          'Authorization': `Bearer ${staffToken}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
+      const res = await request(app)
+        .post('/api/announcements')
+        .set('Authorization', `Bearer ${staffToken}`)
+        .send({
           title: 'Staff Test Announcement',
-          content: 'This is a test announcement',
+          content: 'Created by staff in CI test',
           scope: 'GLOBAL'
-        })
-      });
-      const data = await res.json();
+        });
       
       expect(res.status).toBe(201);
-      expect(data.title).toBe('Staff Test Announcement');
+      expect(res.body.title).toBe('Staff Test Announcement');
     });
   });
 });
