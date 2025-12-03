@@ -7,9 +7,8 @@ on:
     branches: [ main ]
 
 jobs:
-  # ============================================
-  # STAGE 1: BUILD & TEST BACKEND
-  # ============================================
+  # STAEGE 1: BUILD & TEST BACKEND
+  #---==-----------=-------------------
   backend:
     name: Backend - Build & Test
     runs-on: ubuntu-latest
