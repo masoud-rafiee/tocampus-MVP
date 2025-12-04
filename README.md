@@ -253,3 +253,4 @@ Academic project - Bishop's University © 2025
 ---
 
 **Built with ❤️ for campus communities worldwide**
+
