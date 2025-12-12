@@ -489,17 +489,52 @@ app.post('/api/auth/login', async (req, res) => {
 
 // Events
 app.get('/api/events', authenticateToken, (req, res) => {
-  const events = Array.from(DB.events.values())
-    .filter(e => e.universityId === req.user.universityId && e.status === 'PUBLISHED')
-    .map(event => ({
-      ...event,
-      attendeeCount: event.rsvpIds.length || event.defaultAttendeeCount || 0,
-      creator: (() => {
-        const creator = DB.users.get(event.creatorId);
-        return creator ? { firstName: creator.firstName, lastName: creator.lastName } : null;
-      })()
-    }));
+  const { status } = req.query;
+  
+  let events = Array.from(DB.events.values())
+    .filter(e => e.universityId === req.user.universityId);
+  
+  // Filter by status if provided
+  if (status === 'pending') {
+    events = events.filter(e => !e.isApproved);
+  } else {
+    // Default: only show published events to regular users
+    events = events.filter(e => e.status === 'PUBLISHED');
+  }
+  
+  events = events.map(event => ({
+    ...event,
+    attendeeCount: event.rsvpIds?.length || event.defaultAttendeeCount || 0,
+    creator: (() => {
+      const creator = DB.users.get(event.creatorId);
+      return creator ? { firstName: creator.firstName, lastName: creator.lastName } : null;
+    })()
+  }));
+  
   res.json(events);
+});
+
+// Get single event by ID
+app.get('/api/events/:id', authenticateToken, (req, res) => {
+  const event = DB.events.get(req.params.id);
+  if (!event) {
+    return res.status(404).json({ error: 'Event not found' });
+  }
+  
+  const creator = DB.users.get(event.creatorId);
+  const rsvps = (event.rsvpIds || []).map(id => {
+    const rsvp = DB.rsvps.get(id);
+    if (!rsvp) return null;
+    const user = DB.users.get(rsvp.userId);
+    return user ? { firstName: user.firstName, lastName: user.lastName } : null;
+  }).filter(Boolean);
+  
+  res.json({
+    ...event,
+    attendeeCount: event.rsvpIds?.length || event.defaultAttendeeCount || 0,
+    creator: creator ? { firstName: creator.firstName, lastName: creator.lastName } : null,
+    attendees: rsvps
+  });
 });
 
 app.post('/api/events', authenticateToken, (req, res) => {
@@ -695,9 +730,41 @@ app.get('/api/groups', authenticateToken, (req, res) => {
     .map(group => ({
       ...group,
       // Use actual member count or default display count
-      memberCount: group.membershipIds.length || group.defaultMemberCount || 0
+      memberCount: group.membershipIds?.length || group.defaultMemberCount || 0
     }));
   res.json(groups);
+});
+
+// Get single group by ID
+app.get('/api/groups/:id', authenticateToken, (req, res) => {
+  const group = DB.groups.get(req.params.id);
+  if (!group) {
+    return res.status(404).json({ error: 'Group not found' });
+  }
+  
+  // Get members
+  const members = (group.membershipIds || []).map(id => {
+    const membership = DB.memberships.get(id);
+    if (!membership) return null;
+    const user = DB.users.get(membership.userId);
+    return user ? {
+      id: user.id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: membership.role,
+      joinedAt: membership.joinedAt
+    } : null;
+  }).filter(Boolean);
+  
+  // Check if current user is a member
+  const isMember = members.some(m => m.id === req.user.id);
+  
+  res.json({
+    ...group,
+    memberCount: group.membershipIds?.length || group.defaultMemberCount || 0,
+    members,
+    isMember
+  });
 });
 
 app.post('/api/groups', authenticateToken, (req, res) => {
@@ -922,6 +989,33 @@ app.post('/api/announcements/:id/like', authenticateToken, (req, res) => {
   res.json({ likeCount: announcement.likeUserIds.length });
 });
 
+// GET comments for an announcement
+app.get('/api/announcements/:id/comments', authenticateToken, (req, res) => {
+  const announcement = DB.announcements.get(req.params.id);
+  if (!announcement) {
+    return res.status(404).json({ error: 'Announcement not found' });
+  }
+
+  const comments = (announcement.commentIds || [])
+    .map(id => DB.comments.get(id))
+    .filter(Boolean)
+    .map(comment => {
+      const author = DB.users.get(comment.authorId);
+      return {
+        ...comment,
+        author: author ? {
+          id: author.id,
+          firstName: author.firstName,
+          lastName: author.lastName,
+          role: author.role
+        } : null
+      };
+    })
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  res.json(comments);
+});
+
 app.post('/api/announcements/:id/comments', authenticateToken, (req, res) => {
   const announcement = DB.announcements.get(req.params.id);
   if (!announcement) {
@@ -938,9 +1032,20 @@ app.post('/api/announcements/:id/comments', authenticateToken, (req, res) => {
   };
 
   DB.comments.set(commentId, newComment);
+  if (!announcement.commentIds) announcement.commentIds = [];
   announcement.commentIds.push(commentId);
-
-  res.status(201).json(newComment);
+  
+  // Include author info in response
+  const author = DB.users.get(req.user.id);
+  res.status(201).json({
+    ...newComment,
+    author: author ? {
+      id: author.id,
+      firstName: author.firstName,
+      lastName: author.lastName,
+      role: author.role
+    } : null
+  });
 });
 
 // Social Sharing (FR6a, FR6b - Social Media Selection & Cross-Posting)
@@ -1061,6 +1166,79 @@ app.get('/', (req, res) => {
     },
     frontend: 'http://localhost:3000'
   });
+});
+
+// Global Search endpoint (Search across events, groups, announcements)
+app.get('/api/search', authenticateToken, (req, res) => {
+  const { q, type } = req.query;
+  
+  if (!q || q.length < 2) {
+    return res.status(400).json({ error: 'Search query must be at least 2 characters' });
+  }
+  
+  const query = q.toLowerCase();
+  const results = { events: [], groups: [], announcements: [] };
+  
+  // Search events
+  if (!type || type === 'events' || type === 'all') {
+    results.events = Array.from(DB.events.values())
+      .filter(e => 
+        e.universityId === req.user.universityId && 
+        e.status === 'PUBLISHED' &&
+        (e.title.toLowerCase().includes(query) || 
+         e.description.toLowerCase().includes(query) ||
+         e.category?.toLowerCase().includes(query))
+      )
+      .slice(0, 10)
+      .map(event => ({
+        id: event.id,
+        title: event.title,
+        description: event.description.substring(0, 100) + '...',
+        category: event.category,
+        startTime: event.startTime,
+        type: 'event'
+      }));
+  }
+  
+  // Search groups
+  if (!type || type === 'groups' || type === 'all') {
+    results.groups = Array.from(DB.groups.values())
+      .filter(g => 
+        g.universityId === req.user.universityId &&
+        (g.name.toLowerCase().includes(query) || 
+         g.description.toLowerCase().includes(query) ||
+         g.category?.toLowerCase().includes(query))
+      )
+      .slice(0, 10)
+      .map(group => ({
+        id: group.id,
+        name: group.name,
+        description: group.description.substring(0, 100) + '...',
+        category: group.category,
+        memberCount: group.membershipIds?.length || group.defaultMemberCount || 0,
+        type: 'group'
+      }));
+  }
+  
+  // Search announcements
+  if (!type || type === 'announcements' || type === 'all') {
+    results.announcements = Array.from(DB.announcements.values())
+      .filter(a => 
+        a.universityId === req.user.universityId &&
+        (a.title.toLowerCase().includes(query) || 
+         a.content.toLowerCase().includes(query))
+      )
+      .slice(0, 10)
+      .map(ann => ({
+        id: ann.id,
+        title: ann.title,
+        content: ann.content.substring(0, 100) + '...',
+        createdAt: ann.createdAt,
+        type: 'announcement'
+      }));
+  }
+  
+  res.json(results);
 });
 
 // Health check

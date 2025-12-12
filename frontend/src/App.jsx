@@ -1,8 +1,56 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Calendar, Users, MessageSquare, Bell, Menu, X, Plus, ThumbsUp, MessageCircle, Share2, CheckCircle, Clock, MapPin, User, Settings, LogOut, Home, Search, Mail, Lock, Eye, EyeOff, ArrowRight, Sparkles, GraduationCap, Building, UserCheck, AlertCircle, RefreshCw, ChevronLeft } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { 
+  Calendar, Users, MessageSquare, Bell, Menu, X, Plus, ThumbsUp, MessageCircle, 
+  Share2, CheckCircle, Clock, MapPin, User, Settings, LogOut, Home, Search, 
+  Mail, Lock, Eye, EyeOff, ArrowRight, Sparkles, GraduationCap, Building, 
+  UserCheck, AlertCircle, RefreshCw, ChevronLeft, Filter, Grid, List, 
+  Download, ExternalLink, Heart, Send, Copy, Instagram, Facebook, Twitter, 
+  Linkedin, ChevronDown, Tag, Bookmark, BookmarkCheck, Edit, Trash2,
+  Shield, BarChart3, UserPlus, CheckSquare, XCircle, Globe, Hash,
+  Zap, Star, TrendingUp, Award, Target, Coffee, Music, Palette,
+  Camera, Code, Dumbbell, BookOpen, Mic, Gamepad2, Film, Plane
+} from 'lucide-react';
 
 // API Configuration
 const API_BASE_URL = 'http://localhost:3001/api';
+
+// Category configurations for filtering
+const EVENT_CATEGORIES = [
+  { id: 'all', label: 'All', icon: Grid, color: 'gray' },
+  { id: 'Social', label: 'Social', icon: Coffee, color: 'purple' },
+  { id: 'Academic', label: 'Academic', icon: BookOpen, color: 'blue' },
+  { id: 'Sports', label: 'Sports', icon: Dumbbell, color: 'green' },
+  { id: 'Arts', label: 'Arts', icon: Palette, color: 'pink' },
+  { id: 'Music', label: 'Music', icon: Music, color: 'yellow' },
+  { id: 'Tech', label: 'Tech', icon: Code, color: 'cyan' },
+  { id: 'Career', label: 'Career', icon: Target, color: 'orange' }
+];
+
+// Interest tags for profile
+const INTEREST_TAGS = [
+  { id: 'music', label: 'Music', icon: Music },
+  { id: 'sports', label: 'Sports', icon: Dumbbell },
+  { id: 'arts', label: 'Arts & Design', icon: Palette },
+  { id: 'tech', label: 'Technology', icon: Code },
+  { id: 'photography', label: 'Photography', icon: Camera },
+  { id: 'gaming', label: 'Gaming', icon: Gamepad2 },
+  { id: 'film', label: 'Film & Media', icon: Film },
+  { id: 'travel', label: 'Travel', icon: Plane },
+  { id: 'reading', label: 'Reading', icon: BookOpen },
+  { id: 'podcasts', label: 'Podcasts', icon: Mic },
+  { id: 'coffee', label: 'Coffee & Social', icon: Coffee },
+  { id: 'fitness', label: 'Fitness', icon: Dumbbell }
+];
+
+// Social platforms for sharing
+const SOCIAL_PLATFORMS = [
+  { id: 'instagram', name: 'Instagram', icon: Instagram, color: '#E4405F', bgColor: 'bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500' },
+  { id: 'facebook', name: 'Facebook', icon: Facebook, color: '#1877F2', bgColor: 'bg-blue-600' },
+  { id: 'twitter', name: 'X (Twitter)', icon: Twitter, color: '#000000', bgColor: 'bg-black' },
+  { id: 'linkedin', name: 'LinkedIn', icon: Linkedin, color: '#0A66C2', bgColor: 'bg-blue-700' },
+  { id: 'whatsapp', name: 'WhatsApp', icon: MessageCircle, color: '#25D366', bgColor: 'bg-green-500' },
+  { id: 'copy', name: 'Copy Link', icon: Copy, color: '#6B7280', bgColor: 'bg-gray-600' }
+];
 
 // ============================================
 // AUTHENTICATION SCREENS (SRS FR1, FR2, FR3)
@@ -31,6 +79,1000 @@ const AnimatedBackground = () => (
     ))}
   </div>
 );
+
+// ============================================
+// MODAL COMPONENTS (Enhanced UX)
+// ============================================
+
+// Generic Modal Wrapper
+const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
+  if (!isOpen) return null;
+  
+  const sizeClasses = {
+    sm: 'max-w-sm',
+    md: 'max-w-md',
+    lg: 'max-w-lg',
+    xl: 'max-w-xl',
+    full: 'max-w-full mx-4'
+  };
+  
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={onClose}>
+      <div 
+        className={`bg-gray-800 rounded-2xl w-full ${sizeClasses[size]} max-h-[90vh] overflow-hidden shadow-2xl border border-gray-700`}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between p-4 border-b border-gray-700">
+          <h2 className="text-white font-bold text-lg">{title}</h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-700 rounded-full transition">
+            <X size={20} className="text-gray-400" />
+          </button>
+        </div>
+        <div className="overflow-y-auto max-h-[calc(90vh-4rem)]">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Event Details Modal (SRS FR4, FR5 Enhanced)
+const EventDetailModal = ({ event, isOpen, onClose, onRSVP, hasRSVPed, onShare }) => {
+  if (!isOpen || !event) return null;
+  
+  const formatFullDate = (date) => {
+    return new Date(date).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+  
+  const formatTimeRange = (start, end) => {
+    const startTime = new Date(start).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    const endTime = new Date(end).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    return `${startTime} - ${endTime}`;
+  };
+  
+  const handleAddToCalendar = () => {
+    // Generate iCal format
+    const startDate = new Date(event.startTime).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    const endDate = new Date(event.endTime).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    
+    const icalContent = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+DTSTART:${startDate}
+DTEND:${endDate}
+SUMMARY:${event.title}
+DESCRIPTION:${event.description}
+LOCATION:${event.location}
+END:VEVENT
+END:VCALENDAR`;
+    
+    const blob = new Blob([icalContent], { type: 'text/calendar' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${event.title.replace(/\s+/g, '_')}.ics`;
+    link.click();
+  };
+  
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={onClose}>
+      <div 
+        className="bg-gray-800 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-hidden shadow-2xl border border-gray-700"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header Image */}
+        <div className="h-32 bg-gradient-to-br from-purple-600 via-blue-600 to-orange-500 relative">
+          <button 
+            onClick={onClose}
+            className="absolute top-3 right-3 p-2 bg-black/30 hover:bg-black/50 rounded-full transition"
+          >
+            <X size={20} className="text-white" />
+          </button>
+          <div className="absolute bottom-3 left-4">
+            <span className="bg-white/20 backdrop-blur px-3 py-1 rounded-full text-white text-sm font-medium">
+              {event.category || 'Event'}
+            </span>
+          </div>
+        </div>
+        
+        {/* Content */}
+        <div className="p-5 overflow-y-auto max-h-[calc(90vh-8rem)]">
+          <h2 className="text-white font-bold text-xl mb-2">{event.title}</h2>
+          
+          {/* Meta Info */}
+          <div className="space-y-3 mb-4">
+            <div className="flex items-center text-gray-400">
+              <Calendar size={18} className="mr-3 text-purple-400" />
+              <span>{formatFullDate(event.startTime)}</span>
+            </div>
+            <div className="flex items-center text-gray-400">
+              <Clock size={18} className="mr-3 text-blue-400" />
+              <span>{formatTimeRange(event.startTime, event.endTime)}</span>
+            </div>
+            <div className="flex items-center text-gray-400">
+              <MapPin size={18} className="mr-3 text-orange-400" />
+              <span>{event.location}</span>
+            </div>
+            <div className="flex items-center text-gray-400">
+              <Users size={18} className="mr-3 text-green-400" />
+              <span>{event.attendeeCount || 0} attending</span>
+            </div>
+          </div>
+          
+          {/* Description */}
+          <div className="mb-5">
+            <h3 className="text-white font-semibold mb-2">About this event</h3>
+            <p className="text-gray-400 text-sm leading-relaxed">{event.description}</p>
+          </div>
+          
+          {/* Map Placeholder */}
+          <div className="bg-gray-700/50 rounded-xl p-4 mb-5">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-gray-400 text-sm">📍 {event.location}</span>
+              <button className="text-purple-400 text-sm hover:text-purple-300 flex items-center">
+                <ExternalLink size={14} className="mr-1" />
+                Open in Maps
+              </button>
+            </div>
+            <div className="h-24 bg-gray-600 rounded-lg flex items-center justify-center text-gray-400 text-sm">
+              Map Preview (Integration Ready)
+            </div>
+          </div>
+          
+          {/* Organizer */}
+          {event.creator && (
+            <div className="flex items-center mb-5 p-3 bg-gray-700/30 rounded-xl">
+              <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center text-white font-bold mr-3">
+                {event.creator.firstName?.[0]}{event.creator.lastName?.[0]}
+              </div>
+              <div>
+                <p className="text-white text-sm font-medium">Organized by</p>
+                <p className="text-gray-400 text-sm">{event.creator.firstName} {event.creator.lastName}</p>
+              </div>
+            </div>
+          )}
+          
+          {/* Action Buttons */}
+          <div className="flex gap-3">
+            <button
+              onClick={() => onRSVP(event.id)}
+              className={`flex-1 py-3 rounded-xl font-semibold transition flex items-center justify-center ${
+                hasRSVPed 
+                  ? 'bg-green-600 text-white' 
+                  : 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:opacity-90'
+              }`}
+            >
+              {hasRSVPed ? (
+                <>
+                  <CheckCircle size={18} className="mr-2" />
+                  You're Going!
+                </>
+              ) : (
+                <>
+                  <Plus size={18} className="mr-2" />
+                  RSVP Now
+                </>
+              )}
+            </button>
+            <button
+              onClick={handleAddToCalendar}
+              className="p-3 bg-gray-700 hover:bg-gray-600 rounded-xl transition"
+              title="Add to Calendar"
+            >
+              <Download size={20} className="text-gray-300" />
+            </button>
+            <button
+              onClick={() => onShare(event)}
+              className="p-3 bg-gray-700 hover:bg-gray-600 rounded-xl transition"
+              title="Share Event"
+            >
+              <Share2 size={20} className="text-gray-300" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Social Share Modal (SRS FR6a, FR6b)
+const ShareModal = ({ isOpen, onClose, item, type = 'event' }) => {
+  const [copied, setCopied] = useState(false);
+  const [selectedPlatforms, setSelectedPlatforms] = useState([]);
+  
+  if (!isOpen || !item) return null;
+  
+  const shareUrl = `https://tocampus.app/${type}s/${item.id}`;
+  const shareText = type === 'event' 
+    ? `Check out this event: ${item.title}` 
+    : `${item.title} - ToCampus`;
+  
+  const handleShare = async (platform) => {
+    if (platform.id === 'copy') {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      return;
+    }
+    
+    const urls = {
+      instagram: `https://instagram.com`, // Instagram doesn't support direct share URLs
+      facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`,
+      twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`,
+      linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`,
+      whatsapp: `https://wa.me/?text=${encodeURIComponent(`${shareText} ${shareUrl}`)}`
+    };
+    
+    if (urls[platform.id]) {
+      window.open(urls[platform.id], '_blank', 'width=600,height=400');
+    }
+    
+    setSelectedPlatforms(prev => [...prev, platform.id]);
+  };
+  
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Share" size="sm">
+      <div className="p-4">
+        <p className="text-gray-400 text-sm mb-4">Share "{item.title}" to your favorite platforms</p>
+        
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          {SOCIAL_PLATFORMS.map(platform => (
+            <button
+              key={platform.id}
+              onClick={() => handleShare(platform)}
+              className={`flex flex-col items-center p-4 rounded-xl transition ${
+                selectedPlatforms.includes(platform.id) 
+                  ? 'bg-green-500/20 border border-green-500/50' 
+                  : 'bg-gray-700 hover:bg-gray-600'
+              }`}
+            >
+              <div className={`w-12 h-12 ${platform.bgColor} rounded-full flex items-center justify-center mb-2`}>
+                <platform.icon size={24} className="text-white" />
+              </div>
+              <span className="text-white text-xs">
+                {platform.id === 'copy' && copied ? 'Copied!' : platform.name}
+              </span>
+            </button>
+          ))}
+        </div>
+        
+        {/* Share URL */}
+        <div className="bg-gray-700 rounded-xl p-3 flex items-center">
+          <input 
+            type="text" 
+            value={shareUrl} 
+            readOnly 
+            className="flex-1 bg-transparent text-gray-300 text-sm outline-none"
+          />
+          <button 
+            onClick={() => handleShare({ id: 'copy' })}
+            className="text-purple-400 hover:text-purple-300 ml-2"
+          >
+            <Copy size={18} />
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+};
+
+// Create Event/Announcement Modal (SRS FR4, FR6)
+const CreateEventModal = ({ isOpen, onClose, onSubmit, authToken }) => {
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    location: '',
+    category: 'Social',
+    startDate: '',
+    startTime: '',
+    endDate: '',
+    endTime: ''
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setIsSubmitting(true);
+    
+    try {
+      const startDateTime = new Date(`${formData.startDate}T${formData.startTime}`);
+      const endDateTime = new Date(`${formData.endDate}T${formData.endTime}`);
+      
+      const response = await fetch(`${API_BASE_URL}/events`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          title: formData.title,
+          description: formData.description,
+          location: formData.location,
+          category: formData.category,
+          startTime: startDateTime.toISOString(),
+          endTime: endDateTime.toISOString()
+        })
+      });
+      
+      if (response.ok) {
+        const newEvent = await response.json();
+        onSubmit(newEvent);
+        onClose();
+        setFormData({
+          title: '', description: '', location: '', category: 'Social',
+          startDate: '', startTime: '', endDate: '', endTime: ''
+        });
+      } else {
+        const data = await response.json();
+        setError(data.error || 'Failed to create event');
+      }
+    } catch (err) {
+      setError('Network error. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Create Event" size="lg">
+      <form onSubmit={handleSubmit} className="p-4 space-y-4">
+        {error && (
+          <div className="bg-red-500/20 border border-red-500/50 text-red-400 p-3 rounded-xl text-sm">
+            {error}
+          </div>
+        )}
+        
+        <div>
+          <label className="block text-gray-300 text-sm mb-1">Event Title *</label>
+          <input
+            type="text"
+            value={formData.title}
+            onChange={e => setFormData({...formData, title: e.target.value})}
+            className="w-full bg-gray-700 text-white px-4 py-3 rounded-xl border border-gray-600 focus:border-purple-500 focus:outline-none"
+            placeholder="e.g., Career Fair 2025"
+            required
+          />
+        </div>
+        
+        <div>
+          <label className="block text-gray-300 text-sm mb-1">Description *</label>
+          <textarea
+            value={formData.description}
+            onChange={e => setFormData({...formData, description: e.target.value})}
+            className="w-full bg-gray-700 text-white px-4 py-3 rounded-xl border border-gray-600 focus:border-purple-500 focus:outline-none resize-none"
+            rows={3}
+            placeholder="Describe your event..."
+            required
+          />
+        </div>
+        
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-gray-300 text-sm mb-1">Start Date *</label>
+            <input
+              type="date"
+              value={formData.startDate}
+              onChange={e => setFormData({...formData, startDate: e.target.value})}
+              className="w-full bg-gray-700 text-white px-4 py-3 rounded-xl border border-gray-600 focus:border-purple-500 focus:outline-none"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-gray-300 text-sm mb-1">Start Time *</label>
+            <input
+              type="time"
+              value={formData.startTime}
+              onChange={e => setFormData({...formData, startTime: e.target.value})}
+              className="w-full bg-gray-700 text-white px-4 py-3 rounded-xl border border-gray-600 focus:border-purple-500 focus:outline-none"
+              required
+            />
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-gray-300 text-sm mb-1">End Date *</label>
+            <input
+              type="date"
+              value={formData.endDate}
+              onChange={e => setFormData({...formData, endDate: e.target.value})}
+              className="w-full bg-gray-700 text-white px-4 py-3 rounded-xl border border-gray-600 focus:border-purple-500 focus:outline-none"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-gray-300 text-sm mb-1">End Time *</label>
+            <input
+              type="time"
+              value={formData.endTime}
+              onChange={e => setFormData({...formData, endTime: e.target.value})}
+              className="w-full bg-gray-700 text-white px-4 py-3 rounded-xl border border-gray-600 focus:border-purple-500 focus:outline-none"
+              required
+            />
+          </div>
+        </div>
+        
+        <div>
+          <label className="block text-gray-300 text-sm mb-1">Location *</label>
+          <input
+            type="text"
+            value={formData.location}
+            onChange={e => setFormData({...formData, location: e.target.value})}
+            className="w-full bg-gray-700 text-white px-4 py-3 rounded-xl border border-gray-600 focus:border-purple-500 focus:outline-none"
+            placeholder="e.g., Student Union Building, Room 101"
+            required
+          />
+        </div>
+        
+        <div>
+          <label className="block text-gray-300 text-sm mb-1">Category</label>
+          <select
+            value={formData.category}
+            onChange={e => setFormData({...formData, category: e.target.value})}
+            className="w-full bg-gray-700 text-white px-4 py-3 rounded-xl border border-gray-600 focus:border-purple-500 focus:outline-none"
+          >
+            {EVENT_CATEGORIES.filter(c => c.id !== 'all').map(cat => (
+              <option key={cat.id} value={cat.id}>{cat.label}</option>
+            ))}
+          </select>
+        </div>
+        
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="w-full py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl font-semibold hover:opacity-90 transition disabled:opacity-50"
+        >
+          {isSubmitting ? 'Creating...' : 'Create Event'}
+        </button>
+        
+        <p className="text-gray-500 text-xs text-center">
+          Events require admin approval before being published.
+        </p>
+      </form>
+    </Modal>
+  );
+};
+
+// Create Announcement Modal
+const CreateAnnouncementModal = ({ isOpen, onClose, onSubmit, authToken }) => {
+  const [formData, setFormData] = useState({
+    title: '',
+    content: '',
+    scope: 'GLOBAL'
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setIsSubmitting(true);
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/announcements`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formData)
+      });
+      
+      if (response.ok) {
+        const newAnnouncement = await response.json();
+        onSubmit(newAnnouncement);
+        onClose();
+        setFormData({ title: '', content: '', scope: 'GLOBAL' });
+      } else {
+        const data = await response.json();
+        setError(data.error || 'Failed to post announcement');
+      }
+    } catch (err) {
+      setError('Network error. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Post Announcement" size="lg">
+      <form onSubmit={handleSubmit} className="p-4 space-y-4">
+        {error && (
+          <div className="bg-red-500/20 border border-red-500/50 text-red-400 p-3 rounded-xl text-sm">
+            {error}
+          </div>
+        )}
+        
+        <div>
+          <label className="block text-gray-300 text-sm mb-1">Title *</label>
+          <input
+            type="text"
+            value={formData.title}
+            onChange={e => setFormData({...formData, title: e.target.value})}
+            className="w-full bg-gray-700 text-white px-4 py-3 rounded-xl border border-gray-600 focus:border-purple-500 focus:outline-none"
+            placeholder="e.g., 📢 Important Update"
+            required
+          />
+        </div>
+        
+        <div>
+          <label className="block text-gray-300 text-sm mb-1">Content *</label>
+          <textarea
+            value={formData.content}
+            onChange={e => setFormData({...formData, content: e.target.value})}
+            className="w-full bg-gray-700 text-white px-4 py-3 rounded-xl border border-gray-600 focus:border-purple-500 focus:outline-none resize-none"
+            rows={5}
+            placeholder="Write your announcement..."
+            required
+          />
+        </div>
+        
+        <div>
+          <label className="block text-gray-300 text-sm mb-1">Visibility</label>
+          <select
+            value={formData.scope}
+            onChange={e => setFormData({...formData, scope: e.target.value})}
+            className="w-full bg-gray-700 text-white px-4 py-3 rounded-xl border border-gray-600 focus:border-purple-500 focus:outline-none"
+          >
+            <option value="GLOBAL">🌍 All Users (Global)</option>
+            <option value="GROUP">👥 Group Only</option>
+          </select>
+        </div>
+        
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="w-full py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl font-semibold hover:opacity-90 transition disabled:opacity-50"
+        >
+          {isSubmitting ? 'Posting...' : 'Post Announcement'}
+        </button>
+      </form>
+    </Modal>
+  );
+};
+
+// Group Detail Modal (SRS FR7, FR8)
+const GroupDetailModal = ({ group, isOpen, onClose, onJoin, isMember }) => {
+  if (!isOpen || !group) return null;
+  
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title={group.name} size="lg">
+      <div className="p-4">
+        {/* Header */}
+        <div className="h-24 bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl mb-4 flex items-center justify-center">
+          <Users size={48} className="text-white/50" />
+        </div>
+        
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <span className="bg-purple-500/20 text-purple-400 px-3 py-1 rounded-full text-xs font-medium">
+              {group.category || 'General'}
+            </span>
+          </div>
+          <div className="text-gray-400 text-sm">
+            <Users size={14} className="inline mr-1" />
+            {group.memberCount || 0} members
+          </div>
+        </div>
+        
+        <p className="text-gray-400 text-sm mb-4">{group.description}</p>
+        
+        {/* Group Features */}
+        <div className="grid grid-cols-3 gap-2 mb-4">
+          <div className="bg-gray-700/50 p-3 rounded-xl text-center">
+            <MessageSquare size={20} className="mx-auto text-purple-400 mb-1" />
+            <span className="text-gray-400 text-xs">Discussions</span>
+          </div>
+          <div className="bg-gray-700/50 p-3 rounded-xl text-center">
+            <Calendar size={20} className="mx-auto text-blue-400 mb-1" />
+            <span className="text-gray-400 text-xs">Events</span>
+          </div>
+          <div className="bg-gray-700/50 p-3 rounded-xl text-center">
+            <Bell size={20} className="mx-auto text-orange-400 mb-1" />
+            <span className="text-gray-400 text-xs">Updates</span>
+          </div>
+        </div>
+        
+        {/* Recent Activity Placeholder */}
+        <div className="bg-gray-700/30 rounded-xl p-4 mb-4">
+          <h4 className="text-white font-semibold text-sm mb-3">Recent Activity</h4>
+          <div className="space-y-2">
+            <div className="flex items-center text-gray-400 text-sm">
+              <div className="w-2 h-2 bg-green-500 rounded-full mr-2" />
+              New discussion posted yesterday
+            </div>
+            <div className="flex items-center text-gray-400 text-sm">
+              <div className="w-2 h-2 bg-blue-500 rounded-full mr-2" />
+              5 new members this week
+            </div>
+          </div>
+        </div>
+        
+        <button
+          onClick={() => onJoin(group.id)}
+          className={`w-full py-3 rounded-xl font-semibold transition ${
+            isMember 
+              ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' 
+              : 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:opacity-90'
+          }`}
+        >
+          {isMember ? 'Leave Group' : 'Join Group'}
+        </button>
+      </div>
+    </Modal>
+  );
+};
+
+// Comment Modal (SRS FR6 Enhancement)
+const CommentModal = ({ announcement, isOpen, onClose, authToken }) => {
+  const [comments, setComments] = useState([]);
+  const [newComment, setNewComment] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  
+  useEffect(() => {
+    if (isOpen && announcement) {
+      fetchComments();
+    }
+  }, [isOpen, announcement]);
+  
+  const fetchComments = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/announcements/${announcement.id}/comments`, {
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setComments(data);
+      }
+    } catch (error) {
+      console.error('Error fetching comments:', error);
+    }
+  };
+  
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!newComment.trim()) return;
+    
+    setIsLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/announcements/${announcement.id}/comments`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ content: newComment })
+      });
+      
+      if (response.ok) {
+        setNewComment('');
+        fetchComments();
+      }
+    } catch (error) {
+      console.error('Error posting comment:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  if (!isOpen || !announcement) return null;
+  
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Comments" size="md">
+      <div className="p-4">
+        {/* Original Post Preview */}
+        <div className="bg-gray-700/30 rounded-xl p-3 mb-4">
+          <p className="text-white font-semibold text-sm">{announcement.title}</p>
+          <p className="text-gray-400 text-xs line-clamp-2">{announcement.content}</p>
+        </div>
+        
+        {/* Comments List */}
+        <div className="space-y-3 max-h-60 overflow-y-auto mb-4">
+          {comments.length === 0 ? (
+            <p className="text-gray-500 text-center text-sm py-4">No comments yet. Be the first!</p>
+          ) : (
+            comments.map(comment => (
+              <div key={comment.id} className="bg-gray-700/50 rounded-xl p-3">
+                <div className="flex items-start">
+                  <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold mr-2">
+                    {comment.author?.firstName?.[0]}{comment.author?.lastName?.[0]}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-white text-sm font-medium">
+                      {comment.author?.firstName} {comment.author?.lastName}
+                    </p>
+                    <p className="text-gray-400 text-sm">{comment.content}</p>
+                    <p className="text-gray-500 text-xs mt-1">
+                      {new Date(comment.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+        
+        {/* New Comment Form */}
+        <form onSubmit={handleSubmit} className="flex gap-2">
+          <input
+            type="text"
+            value={newComment}
+            onChange={e => setNewComment(e.target.value)}
+            placeholder="Write a comment..."
+            className="flex-1 bg-gray-700 text-white px-4 py-2 rounded-xl border border-gray-600 focus:border-purple-500 focus:outline-none text-sm"
+          />
+          <button
+            type="submit"
+            disabled={isLoading || !newComment.trim()}
+            className="p-2 bg-purple-600 hover:bg-purple-500 rounded-xl transition disabled:opacity-50"
+          >
+            <Send size={18} className="text-white" />
+          </button>
+        </form>
+      </div>
+    </Modal>
+  );
+};
+
+// Admin Dashboard Panel (SRS FR3 - ADMIN Role)
+const AdminDashboard = ({ authToken, onApproveEvent }) => {
+  const [pendingEvents, setPendingEvents] = useState([]);
+  const [stats, setStats] = useState({ users: 0, events: 0, groups: 0, announcements: 0 });
+  const [isLoading, setIsLoading] = useState(true);
+  
+  useEffect(() => {
+    fetchAdminData();
+  }, []);
+  
+  const fetchAdminData = async () => {
+    try {
+      // Fetch pending events
+      const eventsRes = await fetch(`${API_BASE_URL}/events?status=pending`, {
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
+      if (eventsRes.ok) {
+        const data = await eventsRes.json();
+        setPendingEvents(data.filter(e => !e.isApproved));
+      }
+      
+      // Set mock stats for now
+      setStats({
+        users: 156,
+        events: 24,
+        groups: 12,
+        announcements: 48
+      });
+    } catch (error) {
+      console.error('Error fetching admin data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const handleApprove = async (eventId) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/events/${eventId}/approve`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
+      
+      if (response.ok) {
+        setPendingEvents(prev => prev.filter(e => e.id !== eventId));
+        onApproveEvent && onApproveEvent(eventId);
+      }
+    } catch (error) {
+      console.error('Error approving event:', error);
+    }
+  };
+  
+  return (
+    <div className="space-y-4">
+      <div className="bg-gradient-to-r from-purple-600/20 to-blue-600/20 border border-purple-500/30 rounded-xl p-4">
+        <h3 className="text-white font-bold flex items-center mb-4">
+          <Shield size={20} className="mr-2 text-yellow-400" />
+          Admin Dashboard
+        </h3>
+        
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="bg-gray-800/50 rounded-xl p-3 text-center">
+            <Users size={20} className="mx-auto text-purple-400 mb-1" />
+            <div className="text-white font-bold">{stats.users}</div>
+            <div className="text-gray-400 text-xs">Users</div>
+          </div>
+          <div className="bg-gray-800/50 rounded-xl p-3 text-center">
+            <Calendar size={20} className="mx-auto text-blue-400 mb-1" />
+            <div className="text-white font-bold">{stats.events}</div>
+            <div className="text-gray-400 text-xs">Events</div>
+          </div>
+          <div className="bg-gray-800/50 rounded-xl p-3 text-center">
+            <Users size={20} className="mx-auto text-green-400 mb-1" />
+            <div className="text-white font-bold">{stats.groups}</div>
+            <div className="text-gray-400 text-xs">Groups</div>
+          </div>
+          <div className="bg-gray-800/50 rounded-xl p-3 text-center">
+            <MessageSquare size={20} className="mx-auto text-orange-400 mb-1" />
+            <div className="text-white font-bold">{stats.announcements}</div>
+            <div className="text-gray-400 text-xs">Posts</div>
+          </div>
+        </div>
+        
+        {/* Pending Approvals */}
+        <div className="bg-gray-800/50 rounded-xl p-3">
+          <h4 className="text-white font-semibold text-sm mb-2 flex items-center">
+            <AlertCircle size={16} className="mr-2 text-yellow-400" />
+            Pending Approvals ({pendingEvents.length})
+          </h4>
+          
+          {pendingEvents.length === 0 ? (
+            <p className="text-gray-500 text-sm text-center py-2">No pending items</p>
+          ) : (
+            <div className="space-y-2 max-h-40 overflow-y-auto">
+              {pendingEvents.slice(0, 5).map(event => (
+                <div key={event.id} className="bg-gray-700/50 rounded-lg p-2 flex items-center justify-between">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white text-sm font-medium truncate">{event.title}</p>
+                    <p className="text-gray-400 text-xs">{event.category}</p>
+                  </div>
+                  <div className="flex gap-1 ml-2">
+                    <button
+                      onClick={() => handleApprove(event.id)}
+                      className="p-1.5 bg-green-600 hover:bg-green-500 rounded-lg transition"
+                    >
+                      <CheckCircle size={14} className="text-white" />
+                    </button>
+                    <button className="p-1.5 bg-red-600 hover:bg-red-500 rounded-lg transition">
+                      <XCircle size={14} className="text-white" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Onboarding Flow Component
+const OnboardingFlow = ({ onComplete }) => {
+  const [step, setStep] = useState(0);
+  const [selectedInterests, setSelectedInterests] = useState([]);
+  
+  const steps = [
+    {
+      title: "Welcome to ToCampus! 🎓",
+      description: "Your campus life, simplified. Discover events, connect with groups, and never miss important updates."
+    },
+    {
+      title: "What interests you?",
+      description: "Select your interests to personalize your feed."
+    },
+    {
+      title: "You're all set! 🎉",
+      description: "Start exploring your campus community now."
+    }
+  ];
+  
+  const toggleInterest = (id) => {
+    setSelectedInterests(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+  
+  const handleNext = () => {
+    if (step < steps.length - 1) {
+      setStep(step + 1);
+    } else {
+      localStorage.setItem('tocampus_onboarded', 'true');
+      localStorage.setItem('tocampus_interests', JSON.stringify(selectedInterests));
+      onComplete();
+    }
+  };
+  
+  return (
+    <div className="min-h-screen bg-gray-900 flex items-center justify-center p-6">
+      <AnimatedBackground />
+      
+      <div className="relative z-10 w-full max-w-md">
+        {/* Progress Dots */}
+        <div className="flex justify-center gap-2 mb-8">
+          {steps.map((_, i) => (
+            <div 
+              key={i}
+              className={`w-2 h-2 rounded-full transition ${
+                i === step ? 'w-6 bg-purple-500' : i < step ? 'bg-purple-400' : 'bg-gray-600'
+              }`}
+            />
+          ))}
+        </div>
+        
+        <div className="text-center mb-8">
+          <h1 className="text-white text-2xl font-bold mb-2">{steps[step].title}</h1>
+          <p className="text-gray-400">{steps[step].description}</p>
+        </div>
+        
+        {/* Step Content */}
+        {step === 0 && (
+          <div className="bg-gray-800/50 backdrop-blur rounded-2xl p-6 mb-6">
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div>
+                <Calendar size={32} className="mx-auto text-purple-400 mb-2" />
+                <p className="text-white text-sm font-medium">Events</p>
+              </div>
+              <div>
+                <Users size={32} className="mx-auto text-blue-400 mb-2" />
+                <p className="text-white text-sm font-medium">Groups</p>
+              </div>
+              <div>
+                <Bell size={32} className="mx-auto text-orange-400 mb-2" />
+                <p className="text-white text-sm font-medium">Updates</p>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {step === 1 && (
+          <div className="bg-gray-800/50 backdrop-blur rounded-2xl p-4 mb-6 max-h-60 overflow-y-auto">
+            <div className="grid grid-cols-3 gap-2">
+              {INTEREST_TAGS.map(tag => (
+                <button
+                  key={tag.id}
+                  onClick={() => toggleInterest(tag.id)}
+                  className={`p-3 rounded-xl transition flex flex-col items-center ${
+                    selectedInterests.includes(tag.id)
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                >
+                  <tag.icon size={24} className="mb-1" />
+                  <span className="text-xs">{tag.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        {step === 2 && (
+          <div className="bg-gray-800/50 backdrop-blur rounded-2xl p-6 mb-6 text-center">
+            <div className="w-20 h-20 bg-gradient-to-br from-purple-600 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <CheckCircle size={40} className="text-white" />
+            </div>
+            <p className="text-gray-400">
+              {selectedInterests.length > 0 
+                ? `Great! We've saved ${selectedInterests.length} interests.`
+                : "You can update your interests anytime in settings."}
+            </p>
+          </div>
+        )}
+        
+        <button
+          onClick={handleNext}
+          className="w-full py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl font-semibold hover:opacity-90 transition"
+        >
+          {step < steps.length - 1 ? 'Continue' : 'Get Started'}
+        </button>
+        
+        {step > 0 && step < steps.length - 1 && (
+          <button
+            onClick={() => setStep(step - 1)}
+            className="w-full py-3 text-gray-400 hover:text-white transition mt-2"
+          >
+            Back
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
 
 // Splash Screen Component
 const SplashScreen = ({ onComplete }) => {
@@ -877,16 +1919,27 @@ const BottomNav = ({ activeTab, onTabChange }) => {
   );
 };
 
-const EventCard = ({ event, onRSVP, hasRSVPed }) => {
+const EventCard = ({ event, onRSVP, hasRSVPed, onViewDetails, onShare }) => {
   return (
-    <div className="bg-gray-800 rounded-2xl overflow-hidden shadow-xl mb-4">
-      <div className="h-32 bg-gradient-to-br from-purple-500 via-blue-500 to-orange-500 relative">
+    <div className="bg-gray-800 rounded-2xl overflow-hidden shadow-xl mb-4 hover:shadow-purple-500/20 transition-shadow">
+      <div 
+        className="h-32 bg-gradient-to-br from-purple-500 via-blue-500 to-orange-500 relative cursor-pointer"
+        onClick={() => onViewDetails && onViewDetails(event)}
+      >
         <div className="absolute top-3 right-3 bg-yellow-400 text-gray-900 px-3 py-1 rounded-full text-xs font-bold">
           {event.category}
         </div>
+        <div className="absolute bottom-3 left-3 bg-black/30 backdrop-blur px-2 py-1 rounded-lg">
+          <span className="text-white text-xs">Tap for details</span>
+        </div>
       </div>
       <div className="p-4">
-        <h3 className="text-white font-bold text-lg mb-2">{event.title}</h3>
+        <h3 
+          className="text-white font-bold text-lg mb-2 cursor-pointer hover:text-purple-400 transition"
+          onClick={() => onViewDetails && onViewDetails(event)}
+        >
+          {event.title}
+        </h3>
         <p className="text-gray-400 text-sm mb-3 line-clamp-2">{event.description}</p>
         
         <div className="space-y-2 mb-4">
@@ -904,33 +1957,42 @@ const EventCard = ({ event, onRSVP, hasRSVPed }) => {
           </div>
         </div>
         
-        <button
-          onClick={() => onRSVP(event.id)}
-          className={`w-full py-3 rounded-xl font-semibold transition-all ${
-            hasRSVPed
-              ? 'bg-green-600 text-white'
-              : 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-700 hover:to-blue-700'
-          }`}
-        >
-          {hasRSVPed ? (
-            <span className="flex items-center justify-center">
-              <CheckCircle size={20} className="mr-2" />
-              You're Going
-            </span>
-          ) : (
-            'RSVP Now'
-          )}
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => onRSVP(event.id)}
+            className={`flex-1 py-3 rounded-xl font-semibold transition-all ${
+              hasRSVPed
+                ? 'bg-green-600 text-white'
+                : 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-700 hover:to-blue-700'
+            }`}
+          >
+            {hasRSVPed ? (
+              <span className="flex items-center justify-center">
+                <CheckCircle size={20} className="mr-2" />
+                You're Going
+              </span>
+            ) : (
+              'RSVP Now'
+            )}
+          </button>
+          <button
+            onClick={() => onShare && onShare(event)}
+            className="p-3 bg-gray-700 hover:bg-gray-600 rounded-xl transition"
+            title="Share"
+          >
+            <Share2 size={18} className="text-gray-300" />
+          </button>
+        </div>
       </div>
     </div>
   );
 };
 
-const AnnouncementCard = ({ announcement, onLike, onComment, isLiked }) => {
+const AnnouncementCard = ({ announcement, onLike, onComment, onShare, isLiked }) => {
   const author = announcement.author || { firstName: 'Staff', lastName: 'Member' };
   
   return (
-    <div className="bg-gray-800 rounded-2xl p-4 shadow-xl mb-4">
+    <div className="bg-gray-800 rounded-2xl p-4 shadow-xl mb-4 hover:shadow-purple-500/20 transition-shadow">
       <div className="flex items-start mb-3">
         <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center text-white font-bold mr-3">
           {author.firstName?.charAt(0) || 'S'}
@@ -958,14 +2020,17 @@ const AnnouncementCard = ({ announcement, onLike, onComment, isLiked }) => {
         </button>
         
         <button
-          onClick={() => onComment(announcement.id)}
+          onClick={() => onComment(announcement)}
           className="flex items-center space-x-2 px-4 py-2 rounded-lg text-gray-400 hover:text-blue-400 hover:bg-gray-700 transition"
         >
           <MessageCircle size={18} />
           <span className="text-sm font-medium">{announcement.commentCount || 0}</span>
         </button>
         
-        <button className="flex items-center space-x-2 px-4 py-2 rounded-lg text-gray-400 hover:text-orange-400 hover:bg-gray-700 transition">
+        <button 
+          onClick={() => onShare && onShare(announcement)}
+          className="flex items-center space-x-2 px-4 py-2 rounded-lg text-gray-400 hover:text-orange-400 hover:bg-gray-700 transition"
+        >
           <Share2 size={18} />
         </button>
       </div>
@@ -973,8 +2038,11 @@ const AnnouncementCard = ({ announcement, onLike, onComment, isLiked }) => {
   );
 };
 
-const GroupCard = ({ group, onJoin, isMember }) => (
-  <div className="bg-gray-800 rounded-2xl overflow-hidden shadow-xl mb-4">
+const GroupCard = ({ group, onJoin, onViewDetails, isMember }) => (
+  <div 
+    className="bg-gray-800 rounded-2xl overflow-hidden shadow-xl mb-4 hover:shadow-purple-500/20 transition-shadow cursor-pointer"
+    onClick={() => onViewDetails && onViewDetails(group)}
+  >
     <div className="h-24 bg-gradient-to-br from-orange-500 via-yellow-500 to-purple-500" />
     <div className="p-4">
       <h3 className="text-white font-bold text-lg mb-1">{group.name}</h3>
@@ -1037,7 +2105,7 @@ const NotificationItem = ({ notification, onMarkRead }) => {
 // Main App Component
 const ToCampusApp = () => {
   // Authentication State
-  const [authState, setAuthState] = useState('splash'); // splash, login, register, forgotPassword, authenticated
+  const [authState, setAuthState] = useState('splash'); // splash, login, register, forgotPassword, onboarding, authenticated
   const [currentUser, setCurrentUser] = useState(null);
   const [authToken, setAuthToken] = useState(null);
 
@@ -1048,6 +2116,7 @@ const ToCampusApp = () => {
   const [likedAnnouncements, setLikedAnnouncements] = useState(new Set());
   const [joinedGroups, setJoinedGroups] = useState(new Set());
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
   
   // Data from backend
   const [events, setEvents] = useState([]);
@@ -1055,6 +2124,16 @@ const ToCampusApp = () => {
   const [groups, setGroups] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Modal States
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [selectedGroup, setSelectedGroup] = useState(null);
+  const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
+  const [shareItem, setShareItem] = useState(null);
+  const [shareType, setShareType] = useState('event');
+  const [showCreateEvent, setShowCreateEvent] = useState(false);
+  const [showCreateAnnouncement, setShowCreateAnnouncement] = useState(false);
+  const [showComments, setShowComments] = useState(false);
 
   // Check for existing session on mount
   useEffect(() => {
@@ -1118,6 +2197,35 @@ const ToCampusApp = () => {
       fetchAllData();
     }
   }, [authState, authToken, fetchAllData]);
+  
+  // Filter events by category
+  const filteredEvents = useMemo(() => {
+    return events.filter(event => {
+      const matchesCategory = selectedCategory === 'all' || event.category === selectedCategory;
+      const matchesSearch = !searchQuery || 
+        event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        event.description.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesCategory && matchesSearch;
+    });
+  }, [events, selectedCategory, searchQuery]);
+  
+  // Filter announcements by search
+  const filteredAnnouncements = useMemo(() => {
+    return announcements.filter(ann => {
+      return !searchQuery || 
+        ann.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        ann.content.toLowerCase().includes(searchQuery.toLowerCase());
+    });
+  }, [announcements, searchQuery]);
+  
+  // Filter groups by search
+  const filteredGroups = useMemo(() => {
+    return groups.filter(group => {
+      return !searchQuery || 
+        group.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        group.description.toLowerCase().includes(searchQuery.toLowerCase());
+    });
+  }, [groups, searchQuery]);
 
   // Initialize fallback mock data with rich content
   const initializeMockData = () => {
@@ -1351,10 +2459,43 @@ const ToCampusApp = () => {
       default: return '🎓';
     }
   };
+  
+  // Modal handlers
+  const handleViewEventDetails = (event) => {
+    setSelectedEvent(event);
+  };
+  
+  const handleViewGroupDetails = (group) => {
+    setSelectedGroup(group);
+  };
+  
+  const handleOpenComments = (announcement) => {
+    setSelectedAnnouncement(announcement);
+    setShowComments(true);
+  };
+  
+  const handleShare = (item, type = 'event') => {
+    setShareItem(item);
+    setShareType(type);
+  };
+  
+  const handleEventCreated = (newEvent) => {
+    setEvents(prev => [newEvent, ...prev]);
+    fetchAllData(); // Refresh to get latest data
+  };
+  
+  const handleAnnouncementCreated = (newAnnouncement) => {
+    setAnnouncements(prev => [newAnnouncement, ...prev]);
+    fetchAllData();
+  };
 
   // Render authentication screens
   if (authState === 'splash') {
     return <SplashScreen onComplete={handleSplashComplete} />;
+  }
+  
+  if (authState === 'onboarding') {
+    return <OnboardingFlow onComplete={() => setAuthState('authenticated')} />;
   }
 
   if (authState === 'login') {
@@ -1391,6 +2532,58 @@ const ToCampusApp = () => {
         title="ToCampus"
         onMenuClick={() => setShowMenu(!showMenu)}
         showBack={false}
+      />
+      
+      {/* All Modals */}
+      <EventDetailModal
+        event={selectedEvent}
+        isOpen={!!selectedEvent}
+        onClose={() => setSelectedEvent(null)}
+        onRSVP={handleRSVP}
+        hasRSVPed={selectedEvent ? rsvpedEvents.has(selectedEvent.id) : false}
+        onShare={() => {
+          handleShare(selectedEvent, 'event');
+          setSelectedEvent(null);
+        }}
+      />
+      
+      <GroupDetailModal
+        group={selectedGroup}
+        isOpen={!!selectedGroup}
+        onClose={() => setSelectedGroup(null)}
+        onJoin={handleJoinGroup}
+        isMember={selectedGroup ? joinedGroups.has(selectedGroup.id) : false}
+      />
+      
+      <ShareModal
+        isOpen={!!shareItem}
+        onClose={() => setShareItem(null)}
+        item={shareItem}
+        type={shareType}
+      />
+      
+      <CommentModal
+        announcement={selectedAnnouncement}
+        isOpen={showComments}
+        onClose={() => {
+          setShowComments(false);
+          setSelectedAnnouncement(null);
+        }}
+        authToken={authToken}
+      />
+      
+      <CreateEventModal
+        isOpen={showCreateEvent}
+        onClose={() => setShowCreateEvent(false)}
+        onSubmit={handleEventCreated}
+        authToken={authToken}
+      />
+      
+      <CreateAnnouncementModal
+        isOpen={showCreateAnnouncement}
+        onClose={() => setShowCreateAnnouncement(false)}
+        onSubmit={handleAnnouncementCreated}
+        authToken={authToken}
       />
       
       {/* Side Menu */}
@@ -1452,19 +2645,32 @@ const ToCampusApp = () => {
               </div>
             </div>
             
-            <h2 className="text-white text-xl font-bold mb-4">Latest Updates</h2>
-            {announcements.length === 0 ? (
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-white text-xl font-bold">Latest Updates</h2>
+              {['STAFF', 'FACULTY', 'ADMIN'].includes(currentUser?.role) && (
+                <button
+                  onClick={() => setShowCreateAnnouncement(true)}
+                  className="p-2 bg-purple-600 hover:bg-purple-500 rounded-xl transition"
+                  title="Post Announcement"
+                >
+                  <Plus size={20} className="text-white" />
+                </button>
+              )}
+            </div>
+            
+            {filteredAnnouncements.length === 0 ? (
               <div className="text-center py-8 text-gray-400">
                 <MessageSquare size={40} className="mx-auto mb-2 opacity-50" />
                 <p>No announcements yet</p>
               </div>
             ) : (
-              announcements.map(announcement => (
+              filteredAnnouncements.map(announcement => (
                 <AnnouncementCard
                   key={announcement.id}
                   announcement={announcement}
                   onLike={handleLike}
-                  onComment={() => {}}
+                  onComment={handleOpenComments}
+                  onShare={(ann) => handleShare(ann, 'announcement')}
                   isLiked={likedAnnouncements.has(announcement.id)}
                 />
               ))
@@ -1474,19 +2680,76 @@ const ToCampusApp = () => {
         
         {activeTab === 'events' && (
           <div>
-            <h2 className="text-white text-xl font-bold mb-4">Upcoming Events</h2>
-            {events.length === 0 ? (
+            {/* Search Bar */}
+            <div className="mb-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-3 text-gray-400" size={20} />
+                <input
+                  type="text"
+                  placeholder="Search events..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-gray-800 text-white pl-10 pr-4 py-3 rounded-xl border border-gray-700 focus:border-purple-500 focus:outline-none transition"
+                />
+              </div>
+            </div>
+            
+            {/* Category Filter */}
+            <div className="flex gap-2 overflow-x-auto pb-3 mb-4 scrollbar-hide">
+              {EVENT_CATEGORIES.map(cat => (
+                <button
+                  key={cat.id}
+                  onClick={() => setSelectedCategory(cat.id)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl whitespace-nowrap transition ${
+                    selectedCategory === cat.id
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                  }`}
+                >
+                  <cat.icon size={16} />
+                  {cat.label}
+                </button>
+              ))}
+            </div>
+            
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-white text-xl font-bold">
+                {selectedCategory === 'all' ? 'All Events' : `${selectedCategory} Events`}
+                <span className="text-gray-400 text-sm font-normal ml-2">({filteredEvents.length})</span>
+              </h2>
+              {['STAFF', 'FACULTY', 'ADMIN'].includes(currentUser?.role) && (
+                <button
+                  onClick={() => setShowCreateEvent(true)}
+                  className="p-2 bg-purple-600 hover:bg-purple-500 rounded-xl transition"
+                  title="Create Event"
+                >
+                  <Plus size={20} className="text-white" />
+                </button>
+              )}
+            </div>
+            
+            {filteredEvents.length === 0 ? (
               <div className="text-center py-8 text-gray-400">
                 <Calendar size={40} className="mx-auto mb-2 opacity-50" />
-                <p>No upcoming events</p>
+                <p>{searchQuery || selectedCategory !== 'all' ? 'No events match your filters' : 'No upcoming events'}</p>
+                {(searchQuery || selectedCategory !== 'all') && (
+                  <button
+                    onClick={() => { setSearchQuery(''); setSelectedCategory('all'); }}
+                    className="mt-2 text-purple-400 hover:text-purple-300 text-sm"
+                  >
+                    Clear filters
+                  </button>
+                )}
               </div>
             ) : (
-              events.map(event => (
+              filteredEvents.map(event => (
                 <EventCard
                   key={event.id}
                   event={event}
                   onRSVP={handleRSVP}
                   hasRSVPed={rsvpedEvents.has(event.id)}
+                  onViewDetails={handleViewEventDetails}
+                  onShare={(evt) => handleShare(evt, 'event')}
                 />
               ))
             )}
@@ -1495,18 +2758,37 @@ const ToCampusApp = () => {
         
         {activeTab === 'groups' && (
           <div>
-            <h2 className="text-white text-xl font-bold mb-4">Campus Groups</h2>
-            {groups.length === 0 ? (
+            {/* Search Bar */}
+            <div className="mb-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-3 text-gray-400" size={20} />
+                <input
+                  type="text"
+                  placeholder="Search groups..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-gray-800 text-white pl-10 pr-4 py-3 rounded-xl border border-gray-700 focus:border-purple-500 focus:outline-none transition"
+                />
+              </div>
+            </div>
+            
+            <h2 className="text-white text-xl font-bold mb-4">
+              Campus Groups
+              <span className="text-gray-400 text-sm font-normal ml-2">({filteredGroups.length})</span>
+            </h2>
+            
+            {filteredGroups.length === 0 ? (
               <div className="text-center py-8 text-gray-400">
                 <Users size={40} className="mx-auto mb-2 opacity-50" />
-                <p>No groups available</p>
+                <p>{searchQuery ? 'No groups match your search' : 'No groups available'}</p>
               </div>
             ) : (
-              groups.map(group => (
+              filteredGroups.map(group => (
                 <GroupCard
                   key={group.id}
                   group={group}
                   onJoin={handleJoinGroup}
+                  onViewDetails={handleViewGroupDetails}
                   isMember={joinedGroups.has(group.id)}
                 />
               ))
@@ -1574,6 +2856,11 @@ const ToCampusApp = () => {
                   </div>
                 </div>
               </div>
+              
+              {/* Admin Dashboard (SRS FR3) */}
+              {currentUser?.role === 'ADMIN' && (
+                <AdminDashboard authToken={authToken} onApproveEvent={(id) => fetchAllData()} />
+              )}
 
               {/* Role-based features (SRS FR3) */}
               {['STAFF', 'FACULTY', 'ADMIN'].includes(currentUser?.role) && (
@@ -1583,17 +2870,46 @@ const ToCampusApp = () => {
                     Staff Features
                   </h3>
                   <div className="space-y-2">
-                    <button className="w-full text-left px-4 py-3 bg-gray-800/50 hover:bg-gray-700 rounded-xl text-white transition flex items-center">
+                    <button 
+                      onClick={() => setShowCreateEvent(true)}
+                      className="w-full text-left px-4 py-3 bg-gray-800/50 hover:bg-gray-700 rounded-xl text-white transition flex items-center"
+                    >
                       <Plus size={18} className="mr-3 text-purple-400" />
                       Create Event
                     </button>
-                    <button className="w-full text-left px-4 py-3 bg-gray-800/50 hover:bg-gray-700 rounded-xl text-white transition flex items-center">
+                    <button 
+                      onClick={() => setShowCreateAnnouncement(true)}
+                      className="w-full text-left px-4 py-3 bg-gray-800/50 hover:bg-gray-700 rounded-xl text-white transition flex items-center"
+                    >
                       <MessageSquare size={18} className="mr-3 text-blue-400" />
                       Post Announcement
                     </button>
                   </div>
                 </div>
               )}
+              
+              {/* User Interests Section */}
+              <div className="bg-gray-800 rounded-xl p-4">
+                <h3 className="text-white font-semibold mb-3 flex items-center">
+                  <Heart size={18} className="mr-2 text-pink-400" />
+                  Your Interests
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {JSON.parse(localStorage.getItem('tocampus_interests') || '[]').length > 0 ? (
+                    JSON.parse(localStorage.getItem('tocampus_interests') || '[]').map(interest => {
+                      const tag = INTEREST_TAGS.find(t => t.id === interest);
+                      return tag ? (
+                        <span key={interest} className="bg-purple-500/20 text-purple-400 px-3 py-1 rounded-full text-sm flex items-center">
+                          <tag.icon size={14} className="mr-1" />
+                          {tag.label}
+                        </span>
+                      ) : null;
+                    })
+                  ) : (
+                    <p className="text-gray-500 text-sm">No interests selected yet</p>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         )}

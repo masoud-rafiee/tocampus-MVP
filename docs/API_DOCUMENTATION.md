@@ -142,6 +142,9 @@ Returns all published events for the user's university.
 
 **Headers:** `Authorization: Bearer <token>` (required)
 
+**Query Parameters:**
+- `status` (optional) - Filter by status: `pending` returns unapproved events (admin only)
+
 **Response (200 OK):**
 ```json
 [
@@ -168,7 +171,47 @@ Returns all published events for the user's university.
 
 ---
 
-### 2.2 Create Event
+### 2.2 Get Single Event
+**GET** `/events/:id`
+
+Returns detailed information about a specific event.
+
+**Headers:** `Authorization: Bearer <token>` (required)
+
+**URL Parameters:**
+- `id` - Event UUID
+
+**Response (200 OK):**
+```json
+{
+  "id": "uuid",
+  "universityId": "uuid",
+  "creatorId": "uuid",
+  "title": "Welcome Fair 2025",
+  "description": "Discover clubs and resources...",
+  "startTime": "2025-02-05T14:00:00.000Z",
+  "endTime": "2025-02-05T16:00:00.000Z",
+  "location": "Campus Quad",
+  "category": "Social",
+  "status": "PUBLISHED",
+  "attendeeCount": 24,
+  "creator": {
+    "firstName": "Bob",
+    "lastName": "Staff"
+  },
+  "attendees": [
+    { "firstName": "John", "lastName": "Doe" },
+    { "firstName": "Jane", "lastName": "Smith" }
+  ]
+}
+```
+
+**Error Responses:**
+- `404 Not Found` - Event not found
+
+---
+
+### 2.3 Create Event
 **POST** `/events`
 
 Creates a new event (Staff/Faculty/Admin only).
@@ -211,7 +254,7 @@ Creates a new event (Staff/Faculty/Admin only).
 
 ---
 
-### 2.3 RSVP to Event
+### 2.4 RSVP to Event
 **POST** `/events/:id/rsvp`
 
 Register attendance for an event.
@@ -244,7 +287,7 @@ Register attendance for an event.
 
 ---
 
-### 2.4 Approve Event (Admin Only)
+### 2.5 Approve Event (Admin Only)
 **POST** `/events/:id/approve`
 
 Approve an event for publication (Admin only).
@@ -271,7 +314,7 @@ Approve an event for publication (Admin only).
 
 ---
 
-### 2.5 Publish Event (Creator Only)
+### 2.6 Publish Event (Creator Only)
 **POST** `/events/:id/publish`
 
 Publish an approved event (Creator only).
@@ -673,9 +716,139 @@ Mark a notification as read.
 
 ---
 
-## 7. Health Check
+## 7. Search Endpoints
 
-### 7.1 Health Check
+### 7.1 Global Search
+**GET** `/search`
+
+Search across events, groups, and announcements.
+
+**Headers:** `Authorization: Bearer <token>` (required)
+
+**Query Parameters:**
+- `q` (required) - Search query (minimum 2 characters)
+- `type` (optional) - Filter by type: `events`, `groups`, `announcements`, or `all` (default)
+
+**Example:** `/api/search?q=chess&type=all`
+
+**Response (200 OK):**
+```json
+{
+  "events": [
+    {
+      "id": "uuid",
+      "title": "Chess Tournament",
+      "description": "Annual campus chess championship...",
+      "category": "Competition",
+      "startTime": "2025-03-15T10:00:00.000Z",
+      "type": "event"
+    }
+  ],
+  "groups": [
+    {
+      "id": "uuid",
+      "name": "Chess Club",
+      "description": "Weekly meetings for chess enthusiasts...",
+      "category": "Recreation",
+      "memberCount": 47,
+      "type": "group"
+    }
+  ],
+  "announcements": [
+    {
+      "id": "uuid",
+      "title": "Chess Club Meeting Cancelled",
+      "content": "Due to weather conditions...",
+      "createdAt": "2025-01-29T12:00:00.000Z",
+      "type": "announcement"
+    }
+  ]
+}
+```
+
+**Error Responses:**
+- `400 Bad Request` - Search query must be at least 2 characters
+
+---
+
+## 8. Comments Endpoints
+
+### 8.1 Get Comments for Announcement
+**GET** `/announcements/:id/comments`
+
+Returns all comments for an announcement.
+
+**Headers:** `Authorization: Bearer <token>` (required)
+
+**URL Parameters:**
+- `id` - Announcement UUID
+
+**Response (200 OK):**
+```json
+[
+  {
+    "id": "uuid",
+    "announcementId": "uuid",
+    "authorId": "uuid",
+    "content": "Great announcement!",
+    "createdAt": "2025-01-29T12:00:00.000Z",
+    "author": {
+      "id": "uuid",
+      "firstName": "John",
+      "lastName": "Doe",
+      "role": "STUDENT"
+    }
+  }
+]
+```
+
+**Error Responses:**
+- `404 Not Found` - Announcement not found
+
+---
+
+### 8.2 Add Comment to Announcement
+**POST** `/announcements/:id/comments`
+
+Add a new comment to an announcement.
+
+**Headers:** `Authorization: Bearer <token>` (required)
+
+**URL Parameters:**
+- `id` - Announcement UUID
+
+**Request Body:**
+```json
+{
+  "content": "Great announcement!"
+}
+```
+
+**Response (201 Created):**
+```json
+{
+  "id": "uuid",
+  "announcementId": "uuid",
+  "authorId": "uuid",
+  "content": "Great announcement!",
+  "createdAt": "2025-01-29T12:00:00.000Z",
+  "author": {
+    "id": "uuid",
+    "firstName": "John",
+    "lastName": "Doe",
+    "role": "STUDENT"
+  }
+}
+```
+
+**Error Responses:**
+- `404 Not Found` - Announcement not found
+
+---
+
+## 9. Health Check
+
+### 9.1 Health Check
 **GET** `/health`
 
 Returns server health status.
