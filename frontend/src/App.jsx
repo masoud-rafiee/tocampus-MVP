@@ -4260,15 +4260,15 @@ const ToCampusApp = () => {
                 {selectedCategory === 'all' ? 'All Events' : `${selectedCategory} Events`}
                 <span className="text-gray-400 text-sm font-normal ml-2">({filteredEvents.length})</span>
               </h2>
-              {['STAFF', 'FACULTY', 'ADMIN'].includes(currentUser?.role) && (
-                <button
-                  onClick={() => setShowCreateEvent(true)}
-                  className="p-2 bg-purple-600 hover:bg-purple-500 rounded-xl transition"
-                  title="Create Event"
-                >
-                  <Plus size={20} className="text-white" />
-                </button>
-              )}
+              {/* All users can create events - requires admin approval */}
+              <button
+                onClick={() => setShowCreateEvent(true)}
+                className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg transition font-medium"
+                title="Create Event"
+              >
+                <Plus size={18} className="text-white mr-1" />
+                <span className="text-white">Create</span>
+              </button>
             </div>
             
             {filteredEvents.length === 0 ? (
@@ -4360,31 +4360,30 @@ const ToCampusApp = () => {
                 <AdminDashboard authToken={authToken} onApproveEvent={(id) => fetchAllData()} />
               )}
 
-              {/* Role-based features (SRS FR3) */}
-              {['STAFF', 'FACULTY', 'ADMIN'].includes(currentUser?.role) && (
-                <div className="bg-gradient-to-r from-purple-900/50 to-blue-900/50 rounded-xl p-4 border border-purple-500/30">
-                  <h3 className="text-white font-semibold mb-3 flex items-center">
-                    <Sparkles size={18} className="mr-2 text-yellow-400" />
-                    Staff Features
-                  </h3>
-                  <div className="space-y-2">
-                    <button 
-                      onClick={() => setShowCreateEvent(true)}
-                      className="w-full text-left px-4 py-3 bg-gray-800/50 hover:bg-gray-700 rounded-xl text-white transition flex items-center"
-                    >
-                      <Plus size={18} className="mr-3 text-purple-400" />
-                      Create Event
-                    </button>
-                    <button 
-                      onClick={() => setShowCreateAnnouncement(true)}
-                      className="w-full text-left px-4 py-3 bg-gray-800/50 hover:bg-gray-700 rounded-xl text-white transition flex items-center"
-                    >
-                      <MessageSquare size={18} className="mr-3 text-blue-400" />
-                      Post Announcement
-                    </button>
-                  </div>
+              {/* All users can create content - requires admin approval (SRS FR5, FR8) */}
+              <div className="bg-gradient-to-r from-purple-900/50 to-blue-900/50 rounded-xl p-4 border border-purple-500/30">
+                <h3 className="text-white font-semibold mb-3 flex items-center">
+                  <Sparkles size={18} className="mr-2 text-yellow-400" />
+                  Create Content
+                </h3>
+                <p className="text-gray-400 text-xs mb-3">Your posts will be reviewed by admins before publishing</p>
+                <div className="space-y-2">
+                  <button 
+                    onClick={() => setShowCreateEvent(true)}
+                    className="w-full text-left px-4 py-3 bg-gray-800/50 hover:bg-gray-700 rounded-xl text-white transition flex items-center"
+                  >
+                    <Plus size={18} className="mr-3 text-purple-400" />
+                    Create Event
+                  </button>
+                  <button 
+                    onClick={() => setShowCreateAnnouncement(true)}
+                    className="w-full text-left px-4 py-3 bg-gray-800/50 hover:bg-gray-700 rounded-xl text-white transition flex items-center"
+                  >
+                    <MessageSquare size={18} className="mr-3 text-blue-400" />
+                    Post Announcement
+                  </button>
                 </div>
-              )}
+              </div>
               
               {/* Quick Access Buttons */}
               <div className="bg-gray-800 rounded-xl p-4">

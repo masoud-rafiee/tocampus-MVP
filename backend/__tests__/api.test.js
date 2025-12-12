@@ -135,19 +135,23 @@ describe('ToCampus API', () => {
       expect(Array.isArray(res.body)).toBe(true);
     });
 
-    test('POST /api/events as student should return 403', async () => {
+    test('POST /api/events as student should create event with PENDING status', async () => {
       const res = await request(app)
         .post('/api/events')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
-          title: 'Test Event',
-          description: 'Test Description',
-          date: new Date().toISOString(),
+          title: 'Student Test Event',
+          description: 'Test Description for student event',
+          startTime: new Date().toISOString(),
+          endTime: new Date(Date.now() + 3600000).toISOString(),
           location: 'Test Location',
-          category: 'ACADEMIC'
+          category: 'Social'
         });
       
-      expect(res.status).toBe(403);
+      // Students CAN create events - they go to PENDING status for admin approval
+      expect(res.status).toBe(201);
+      expect(res.body.status).toBe('PENDING');
+      expect(res.body.isApproved).toBe(false);
     });
   });
 
