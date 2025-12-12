@@ -3,14 +3,13 @@ import {
   Calendar, Users, MessageSquare, Bell, Menu, X, Plus, ThumbsUp, MessageCircle, 
   Share2, CheckCircle, Clock, MapPin, User, Settings, LogOut, Home, Search, 
   Mail, Lock, Eye, EyeOff, ArrowRight, Sparkles, GraduationCap, Building, 
-  UserCheck, AlertCircle, RefreshCw, ChevronLeft, Filter, Grid, List, 
+  UserCheck, AlertCircle, RefreshCw, ChevronLeft, Grid,
   Download, ExternalLink, Heart, Send, Copy, Instagram, Facebook, Twitter, 
-  Linkedin, ChevronDown, Tag, Bookmark, BookmarkCheck, Edit, Trash2,
-  Shield, BarChart3, UserPlus, CheckSquare, XCircle, Globe, Hash,
-  Zap, Star, TrendingUp, Award, Target, Coffee, Music, Palette,
+  Linkedin, Tag, Shield, UserPlus, XCircle,
+  Zap, Target, Coffee, Music, Palette,
   Camera, Code, Dumbbell, BookOpen, Mic, Gamepad2, Film, Plane,
-  ShoppingBag, DollarSign, Package, MessageCircle as ChatIcon, Bot, Compass,
-  UserMinus, UserCheck as Following, Users as Followers
+  ShoppingBag, DollarSign, Package, Bot, Compass, MoreHorizontal,
+  BellOff, CheckCheck, Volume2, Inbox, Megaphone, Activity, LayoutGrid
 } from 'lucide-react';
 
 // API Configuration
@@ -1618,13 +1617,714 @@ const ChatbotView = ({ authToken, currentUser }) => {
   );
 };
 
+// ============================================
+// ENHANCED NOTIFICATIONS VIEW (Production Ready)
+// ============================================
+const NotificationsView = ({ 
+  notifications, 
+  onMarkRead, 
+  onMarkAllRead, 
+  onDelete, 
+  authToken,
+  onNavigate 
+}) => {
+  const [filter, setFilter] = useState('all');
+  const [showSettings, setShowSettings] = useState(false);
+  const [notificationSettings, setNotificationSettings] = useState({
+    events: true,
+    announcements: true,
+    groups: true,
+    marketplace: true,
+    social: true,
+    sound: true,
+    email: false
+  });
+
+  const NOTIFICATION_TYPES = [
+    { id: 'all', label: 'All', icon: Inbox },
+    { id: 'EVENT', label: 'Events', icon: Calendar, color: 'purple' },
+    { id: 'ANNOUNCEMENT', label: 'Updates', icon: Megaphone, color: 'blue' },
+    { id: 'GROUP', label: 'Groups', icon: Users, color: 'green' },
+    { id: 'SOCIAL', label: 'Social', icon: Heart, color: 'pink' },
+    { id: 'MARKETPLACE', label: 'Market', icon: ShoppingBag, color: 'orange' }
+  ];
+
+  const getNotificationIcon = (type) => {
+    switch (type) {
+      case 'EVENT_REMINDER':
+      case 'EVENT_UPDATE':
+      case 'EVENT_CANCELLED':
+        return { icon: Calendar, color: 'text-purple-400', bg: 'bg-purple-500/20' };
+      case 'NEW_ANNOUNCEMENT':
+      case 'ANNOUNCEMENT_UPDATE':
+        return { icon: Megaphone, color: 'text-blue-400', bg: 'bg-blue-500/20' };
+      case 'GROUP_INVITE':
+      case 'GROUP_UPDATE':
+      case 'GROUP_POST':
+        return { icon: Users, color: 'text-green-400', bg: 'bg-green-500/20' };
+      case 'NEW_FOLLOWER':
+      case 'MENTION':
+      case 'LIKE':
+        return { icon: Heart, color: 'text-pink-400', bg: 'bg-pink-500/20' };
+      case 'MARKETPLACE_MESSAGE':
+      case 'LISTING_SOLD':
+        return { icon: ShoppingBag, color: 'text-orange-400', bg: 'bg-orange-500/20' };
+      default:
+        return { icon: Bell, color: 'text-gray-400', bg: 'bg-gray-500/20' };
+    }
+  };
+
+  const getNotificationCategory = (type) => {
+    if (type?.includes('EVENT')) return 'EVENT';
+    if (type?.includes('ANNOUNCEMENT')) return 'ANNOUNCEMENT';
+    if (type?.includes('GROUP')) return 'GROUP';
+    if (type?.includes('FOLLOWER') || type?.includes('MENTION') || type?.includes('LIKE')) return 'SOCIAL';
+    if (type?.includes('MARKETPLACE') || type?.includes('LISTING')) return 'MARKETPLACE';
+    return 'OTHER';
+  };
+
+  const filteredNotifications = useMemo(() => {
+    if (filter === 'all') return notifications;
+    return notifications.filter(n => getNotificationCategory(n.type) === filter);
+  }, [notifications, filter]);
+
+  const unreadCount = notifications.filter(n => !n.isRead).length;
+  const groupedNotifications = useMemo(() => {
+    const today = [];
+    const yesterday = [];
+    const thisWeek = [];
+    const older = [];
+    
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterdayStart = new Date(todayStart - 24 * 60 * 60 * 1000);
+    const weekStart = new Date(todayStart - 7 * 24 * 60 * 60 * 1000);
+
+    filteredNotifications.forEach(n => {
+      const date = new Date(n.createdAt);
+      if (date >= todayStart) today.push(n);
+      else if (date >= yesterdayStart) yesterday.push(n);
+      else if (date >= weekStart) thisWeek.push(n);
+      else older.push(n);
+    });
+
+    return { today, yesterday, thisWeek, older };
+  }, [filteredNotifications]);
+
+  const formatTimeAgo = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now - date) / 1000);
+    
+    if (seconds < 60) return 'Just now';
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+    if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
+    return date.toLocaleDateString();
+  };
+
+  const NotificationItem = ({ notification, onRead, onRemove }) => {
+    const { icon: Icon, color, bg } = getNotificationIcon(notification.type);
+    
+    return (
+      <div 
+        className={`relative flex items-start p-4 rounded-xl transition-all duration-200 cursor-pointer group ${
+          notification.isRead 
+            ? 'bg-gray-800/50 hover:bg-gray-800' 
+            : 'bg-gray-800 hover:bg-gray-700 border-l-4 border-purple-500'
+        }`}
+        onClick={() => !notification.isRead && onRead(notification.id)}
+      >
+        {/* Icon */}
+        <div className={`flex-shrink-0 w-10 h-10 ${bg} rounded-xl flex items-center justify-center mr-3`}>
+          <Icon size={20} className={color} />
+        </div>
+        
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between">
+            <p className={`font-semibold text-sm ${notification.isRead ? 'text-gray-400' : 'text-white'}`}>
+              {notification.title}
+            </p>
+            <span className="text-gray-500 text-xs whitespace-nowrap ml-2">
+              {formatTimeAgo(notification.createdAt)}
+            </span>
+          </div>
+          <p className={`text-sm mt-1 line-clamp-2 ${notification.isRead ? 'text-gray-500' : 'text-gray-300'}`}>
+            {notification.message}
+          </p>
+          
+          {/* Action buttons on hover */}
+          {notification.actionUrl && (
+            <button className="mt-2 text-purple-400 text-xs font-medium hover:text-purple-300">
+              View Details →
+            </button>
+          )}
+        </div>
+
+        {/* Unread indicator */}
+        {!notification.isRead && (
+          <div className="absolute top-4 right-4 w-2 h-2 bg-purple-500 rounded-full" />
+        )}
+
+        {/* Delete button on hover */}
+        <button
+          onClick={(e) => { e.stopPropagation(); onRemove(notification.id); }}
+          className="absolute top-2 right-2 p-1.5 rounded-lg bg-gray-700/0 hover:bg-red-500/20 opacity-0 group-hover:opacity-100 transition-all"
+        >
+          <X size={14} className="text-gray-400 hover:text-red-400" />
+        </button>
+      </div>
+    );
+  };
+
+  const NotificationGroup = ({ title, items }) => {
+    if (items.length === 0) return null;
+    
+    return (
+      <div className="mb-6">
+        <h3 className="text-gray-500 text-xs font-semibold uppercase tracking-wider mb-3 px-1">
+          {title}
+        </h3>
+        <div className="space-y-2">
+          {items.map(notification => (
+            <NotificationItem 
+              key={notification.id} 
+              notification={notification}
+              onRead={onMarkRead}
+              onRemove={onDelete}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center">
+          <h2 className="text-white text-xl font-bold">Notifications</h2>
+          {unreadCount > 0 && (
+            <span className="ml-2 bg-purple-600 text-white text-xs px-2.5 py-1 rounded-full font-semibold">
+              {unreadCount} new
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {unreadCount > 0 && (
+            <button
+              onClick={onMarkAllRead}
+              className="flex items-center text-purple-400 hover:text-purple-300 text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-purple-500/10 transition"
+            >
+              <CheckCheck size={16} className="mr-1.5" />
+              Mark all read
+            </button>
+          )}
+          <button
+            onClick={() => setShowSettings(!showSettings)}
+            className="p-2 rounded-xl hover:bg-gray-800 text-gray-400 hover:text-white transition"
+          >
+            <Settings size={20} />
+          </button>
+        </div>
+      </div>
+
+      {/* Settings Panel */}
+      {showSettings && (
+        <div className="bg-gray-800 rounded-xl p-4 border border-gray-700 animate-slideDown">
+          <h3 className="text-white font-semibold mb-3 flex items-center">
+            <Bell size={18} className="mr-2" />
+            Notification Preferences
+          </h3>
+          <div className="space-y-3">
+            {[
+              { key: 'events', label: 'Events & Reminders', icon: Calendar },
+              { key: 'announcements', label: 'Announcements', icon: Megaphone },
+              { key: 'groups', label: 'Group Activity', icon: Users },
+              { key: 'social', label: 'Social (Follows, Likes)', icon: Heart },
+              { key: 'marketplace', label: 'Marketplace', icon: ShoppingBag },
+            ].map(({ key, label, icon: Icon }) => (
+              <label key={key} className="flex items-center justify-between cursor-pointer">
+                <span className="flex items-center text-gray-300">
+                  <Icon size={16} className="mr-2 text-gray-500" />
+                  {label}
+                </span>
+                <div 
+                  onClick={() => setNotificationSettings(prev => ({ ...prev, [key]: !prev[key] }))}
+                  className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
+                    notificationSettings[key] ? 'bg-purple-600' : 'bg-gray-700'
+                  }`}
+                >
+                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${
+                    notificationSettings[key] ? 'translate-x-6' : 'translate-x-1'
+                  }`} />
+                </div>
+              </label>
+            ))}
+            <div className="border-t border-gray-700 pt-3 mt-3">
+              <label className="flex items-center justify-between cursor-pointer">
+                <span className="flex items-center text-gray-300">
+                  <Volume2 size={16} className="mr-2 text-gray-500" />
+                  Sound
+                </span>
+                <div 
+                  onClick={() => setNotificationSettings(prev => ({ ...prev, sound: !prev.sound }))}
+                  className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer ${
+                    notificationSettings.sound ? 'bg-purple-600' : 'bg-gray-700'
+                  }`}
+                >
+                  <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${
+                    notificationSettings.sound ? 'translate-x-6' : 'translate-x-1'
+                  }`} />
+                </div>
+              </label>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Filter Tabs */}
+      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+        {NOTIFICATION_TYPES.map(type => {
+          const Icon = type.icon;
+          const count = type.id === 'all' 
+            ? notifications.length 
+            : notifications.filter(n => getNotificationCategory(n.type) === type.id).length;
+          
+          return (
+            <button
+              key={type.id}
+              onClick={() => setFilter(type.id)}
+              className={`flex items-center px-4 py-2 rounded-xl whitespace-nowrap transition ${
+                filter === type.id
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white'
+              }`}
+            >
+              <Icon size={16} className="mr-2" />
+              {type.label}
+              {count > 0 && (
+                <span className={`ml-2 text-xs px-1.5 py-0.5 rounded-full ${
+                  filter === type.id ? 'bg-white/20' : 'bg-gray-700'
+                }`}>
+                  {count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Notifications List */}
+      {filteredNotifications.length === 0 ? (
+        <div className="text-center py-12">
+          <div className="w-16 h-16 bg-gray-800 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <BellOff size={32} className="text-gray-600" />
+          </div>
+          <p className="text-gray-400 font-medium">No notifications</p>
+          <p className="text-gray-500 text-sm mt-1">
+            {filter === 'all' 
+              ? "You're all caught up!" 
+              : `No ${filter.toLowerCase()} notifications`}
+          </p>
+        </div>
+      ) : (
+        <div>
+          <NotificationGroup title="Today" items={groupedNotifications.today} />
+          <NotificationGroup title="Yesterday" items={groupedNotifications.yesterday} />
+          <NotificationGroup title="This Week" items={groupedNotifications.thisWeek} />
+          <NotificationGroup title="Older" items={groupedNotifications.older} />
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ============================================
+// ENHANCED GROUPS VIEW (Production Ready)
+// ============================================
+const GroupsView = ({ 
+  groups, 
+  joinedGroups, 
+  onJoinGroup, 
+  onViewDetails,
+  authToken,
+  currentUser 
+}) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filter, setFilter] = useState('all');
+  const [showCreateGroup, setShowCreateGroup] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState(null);
+
+  const GROUP_CATEGORIES = [
+    { id: 'all', label: 'All', icon: LayoutGrid },
+    { id: 'Academic', label: 'Academic', icon: BookOpen },
+    { id: 'Sports', label: 'Sports', icon: Dumbbell },
+    { id: 'Arts', label: 'Arts', icon: Palette },
+    { id: 'Tech', label: 'Tech', icon: Code },
+    { id: 'Social', label: 'Social', icon: Coffee },
+    { id: 'Career', label: 'Career', icon: Target }
+  ];
+
+  const filteredGroups = useMemo(() => {
+    let result = groups;
+    
+    if (filter === 'joined') {
+      result = result.filter(g => joinedGroups.has(g.id));
+    } else if (filter !== 'all') {
+      result = result.filter(g => g.category === filter);
+    }
+    
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(g => 
+        g.name.toLowerCase().includes(query) || 
+        g.description?.toLowerCase().includes(query)
+      );
+    }
+    
+    return result;
+  }, [groups, joinedGroups, filter, searchQuery]);
+
+  const myGroups = groups.filter(g => joinedGroups.has(g.id));
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-white text-xl font-bold flex items-center">
+          <Users size={24} className="mr-2 text-blue-400" />
+          Groups
+        </h2>
+        <button
+          onClick={() => setShowCreateGroup(true)}
+          className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl flex items-center text-sm font-semibold transition"
+        >
+          <Plus size={18} className="mr-1" />
+          Create
+        </button>
+      </div>
+
+      {/* My Groups Quick Access */}
+      {myGroups.length > 0 && (
+        <div className="mb-4">
+          <h3 className="text-gray-400 text-sm font-semibold mb-2">My Groups</h3>
+          <div className="flex gap-3 overflow-x-auto pb-2">
+            {myGroups.map(group => (
+              <button
+                key={group.id}
+                onClick={() => onViewDetails(group)}
+                className="flex-shrink-0 flex items-center bg-gray-800 hover:bg-gray-700 rounded-xl px-4 py-2 transition"
+              >
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center mr-2">
+                  <Users size={16} className="text-white" />
+                </div>
+                <span className="text-white text-sm font-medium">{group.name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Search */}
+      <div className="relative">
+        <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search groups..."
+          className="w-full bg-gray-800 text-white pl-10 pr-4 py-3 rounded-xl border border-gray-700 focus:border-blue-500 focus:outline-none transition"
+        />
+      </div>
+
+      {/* Category Filters */}
+      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+        <button
+          onClick={() => setFilter('joined')}
+          className={`flex items-center px-4 py-2 rounded-xl whitespace-nowrap transition ${
+            filter === 'joined'
+              ? 'bg-green-600 text-white'
+              : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+          }`}
+        >
+          <CheckCircle size={16} className="mr-2" />
+          Joined ({myGroups.length})
+        </button>
+        {GROUP_CATEGORIES.map(cat => {
+          const Icon = cat.icon;
+          return (
+            <button
+              key={cat.id}
+              onClick={() => setFilter(cat.id)}
+              className={`flex items-center px-4 py-2 rounded-xl whitespace-nowrap transition ${
+                filter === cat.id
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+              }`}
+            >
+              <Icon size={16} className="mr-2" />
+              {cat.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Groups List */}
+      {filteredGroups.length === 0 ? (
+        <div className="text-center py-12">
+          <Users size={48} className="mx-auto mb-4 text-gray-600" />
+          <p className="text-gray-400 font-medium">No groups found</p>
+          <p className="text-gray-500 text-sm mt-1">
+            {searchQuery ? 'Try a different search' : 'Be the first to create one!'}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {filteredGroups.map(group => (
+            <div
+              key={group.id}
+              className="bg-gray-800 rounded-xl p-4 hover:bg-gray-750 transition cursor-pointer"
+              onClick={() => onViewDetails(group)}
+            >
+              <div className="flex items-start">
+                <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center mr-4">
+                  <Users size={28} className="text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="text-white font-semibold">{group.name}</h3>
+                      <span className="text-gray-500 text-xs">{group.category}</span>
+                    </div>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onJoinGroup(group.id); }}
+                      className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition ${
+                        joinedGroups.has(group.id)
+                          ? 'bg-gray-700 text-gray-300 hover:bg-red-500/20 hover:text-red-400'
+                          : 'bg-blue-600 text-white hover:bg-blue-500'
+                      }`}
+                    >
+                      {joinedGroups.has(group.id) ? 'Joined' : 'Join'}
+                    </button>
+                  </div>
+                  <p className="text-gray-400 text-sm mt-1 line-clamp-2">{group.description}</p>
+                  <div className="flex items-center mt-2 text-gray-500 text-xs">
+                    <Users size={12} className="mr-1" />
+                    {group.memberCount || 0} members
+                    <span className="mx-2">•</span>
+                    <Activity size={12} className="mr-1" />
+                    Active today
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Create Group Modal */}
+      <CreateGroupModal
+        isOpen={showCreateGroup}
+        onClose={() => setShowCreateGroup(false)}
+        authToken={authToken}
+        onSuccess={() => {
+          setShowCreateGroup(false);
+          // Refresh groups list
+        }}
+      />
+    </div>
+  );
+};
+
+// Create Group Modal
+const CreateGroupModal = ({ isOpen, onClose, authToken, onSuccess }) => {
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    category: 'Social',
+    privacy: 'public'
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    
+    if (!formData.name) {
+      setError('Group name is required');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/groups`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formData)
+      });
+
+      if (response.ok) {
+        onSuccess();
+        setFormData({ name: '', description: '', category: 'Social', privacy: 'public' });
+      } else {
+        const data = await response.json();
+        setError(data.error || 'Failed to create group');
+      }
+    } catch (error) {
+      setError('Network error. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Create Group" size="md">
+      <form onSubmit={handleSubmit} className="p-4 space-y-4">
+        {error && (
+          <div className="bg-red-500/20 border border-red-500 text-red-400 px-4 py-2 rounded-xl text-sm">
+            {error}
+          </div>
+        )}
+        
+        <div>
+          <label className="text-gray-400 text-sm block mb-1">Group Name *</label>
+          <input
+            type="text"
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            className="w-full bg-gray-700 text-white px-4 py-3 rounded-xl border border-gray-600 focus:border-blue-500 focus:outline-none"
+            placeholder="e.g., Photography Club"
+          />
+        </div>
+
+        <div>
+          <label className="text-gray-400 text-sm block mb-1">Category</label>
+          <select
+            value={formData.category}
+            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+            className="w-full bg-gray-700 text-white px-4 py-3 rounded-xl border border-gray-600 focus:border-blue-500 focus:outline-none"
+          >
+            <option value="Academic">Academic</option>
+            <option value="Sports">Sports</option>
+            <option value="Arts">Arts & Culture</option>
+            <option value="Tech">Technology</option>
+            <option value="Social">Social</option>
+            <option value="Career">Career</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="text-gray-400 text-sm block mb-1">Description</label>
+          <textarea
+            value={formData.description}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            className="w-full bg-gray-700 text-white px-4 py-3 rounded-xl border border-gray-600 focus:border-blue-500 focus:outline-none resize-none h-24"
+            placeholder="What's your group about?"
+          />
+        </div>
+
+        <div>
+          <label className="text-gray-400 text-sm block mb-2">Privacy</label>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => setFormData({ ...formData, privacy: 'public' })}
+              className={`flex-1 py-3 rounded-xl font-medium transition ${
+                formData.privacy === 'public'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+              }`}
+            >
+              🌍 Public
+            </button>
+            <button
+              type="button"
+              onClick={() => setFormData({ ...formData, privacy: 'private' })}
+              className={`flex-1 py-3 rounded-xl font-medium transition ${
+                formData.privacy === 'private'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+              }`}
+            >
+              🔒 Private
+            </button>
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="w-full bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-xl font-semibold transition disabled:opacity-50 flex items-center justify-center"
+        >
+          {isLoading ? <RefreshCw className="animate-spin" size={20} /> : 'Create Group'}
+        </button>
+      </form>
+    </Modal>
+  );
+};
+
+// ============================================
+// QUICK ACCESS MENU (Marketplace, Assistant, More)
+// ============================================
+const QuickAccessMenu = ({ isOpen, onClose, onNavigate, currentUser }) => {
+  if (!isOpen) return null;
+
+  const menuItems = [
+    { id: 'marketplace', label: 'Marketplace', icon: ShoppingBag, color: 'text-green-400', desc: 'Buy & sell items' },
+    { id: 'chat', label: 'Campus Assistant', icon: Bot, color: 'text-purple-400', desc: 'AI-powered help' },
+    { id: 'discover', label: 'Discover', icon: Compass, color: 'text-blue-400', desc: 'Find new connections' },
+    { id: 'settings', label: 'Settings', icon: Settings, color: 'text-gray-400', desc: 'App preferences' },
+  ];
+
+  return (
+    <div className="fixed inset-0 z-50" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div 
+        className="absolute bottom-20 right-4 w-72 bg-gray-800 rounded-2xl shadow-2xl border border-gray-700 overflow-hidden animate-slideUp"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="p-4 border-b border-gray-700">
+          <h3 className="text-white font-semibold">Quick Access</h3>
+          <p className="text-gray-500 text-sm">More features</p>
+        </div>
+        <div className="p-2">
+          {menuItems.map(item => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.id}
+                onClick={() => { onNavigate(item.id); onClose(); }}
+                className="w-full flex items-center p-3 rounded-xl hover:bg-gray-700 transition text-left"
+              >
+                <div className={`w-10 h-10 rounded-xl bg-gray-700 flex items-center justify-center mr-3`}>
+                  <Icon size={20} className={item.color} />
+                </div>
+                <div>
+                  <p className="text-white font-medium">{item.label}</p>
+                  <p className="text-gray-500 text-xs">{item.desc}</p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // User Profile View with Social Graph (FR34-36)
 const UserProfileView = ({ userId, authToken, currentUser, onBack }) => {
   const [profile, setProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [followers, setFollowers] = useState([]);
-  const [following, setFollowing] = useState([]);
-  const [activeTab, setActiveTab] = useState('about');
   const [isFollowing, setIsFollowing] = useState(false);
 
   useEffect(() => {
@@ -2666,18 +3366,18 @@ const MobileHeader = ({ title, onMenuClick, showBack, onBack }) => (
   </div>
 );
 
-const BottomNav = ({ activeTab, onTabChange }) => {
+const BottomNav = ({ activeTab, onTabChange, unreadNotifications = 0 }) => {
   const tabs = [
     { id: 'feed', icon: Home, label: 'Feed' },
     { id: 'events', icon: Calendar, label: 'Events' },
-    { id: 'marketplace', icon: ShoppingBag, label: 'Market' },
-    { id: 'chat', icon: Bot, label: 'Assistant' },
+    { id: 'groups', icon: Users, label: 'Groups' },
+    { id: 'notifications', icon: Bell, label: 'Alerts', badge: unreadNotifications },
     { id: 'profile', icon: User, label: 'Profile' }
   ];
   
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-700 shadow-2xl z-50">
-      <div className="flex justify-around items-center px-2 py-2">
+    <div className="fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-xl border-t border-gray-800 shadow-2xl z-50 safe-area-bottom">
+      <div className="flex justify-around items-center px-2 py-2 max-w-lg mx-auto">
         {tabs.map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -2685,14 +3385,26 @@ const BottomNav = ({ activeTab, onTabChange }) => {
             <button
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
-              className={`flex flex-col items-center py-2 px-3 rounded-lg transition-all ${
+              className={`relative flex flex-col items-center py-2 px-4 rounded-xl transition-all duration-200 ${
                 isActive 
-                  ? 'text-purple-400' 
-                  : 'text-gray-400 hover:text-white'
+                  ? 'text-purple-400 bg-purple-500/10' 
+                  : 'text-gray-500 hover:text-gray-300 hover:bg-gray-800/50'
               }`}
             >
-              <Icon size={24} strokeWidth={isActive ? 2.5 : 2} />
-              <span className="text-xs mt-1 font-medium">{tab.label}</span>
+              <div className="relative">
+                <Icon size={22} strokeWidth={isActive ? 2.5 : 1.8} />
+                {tab.badge > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 animate-pulse">
+                    {tab.badge > 99 ? '99+' : tab.badge}
+                  </span>
+                )}
+              </div>
+              <span className={`text-[10px] mt-1 font-medium transition-all ${isActive ? 'opacity-100' : 'opacity-70'}`}>
+                {tab.label}
+              </span>
+              {isActive && (
+                <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-1 h-1 bg-purple-400 rounded-full" />
+              )}
             </button>
           );
         })}
@@ -2894,6 +3606,7 @@ const ToCampusApp = () => {
   // App State
   const [activeTab, setActiveTab] = useState('feed');
   const [showMenu, setShowMenu] = useState(false);
+  const [showQuickAccess, setShowQuickAccess] = useState(false);
   const [rsvpedEvents, setRsvpedEvents] = useState(new Set());
   const [likedAnnouncements, setLikedAnnouncements] = useState(new Set());
   const [joinedGroups, setJoinedGroups] = useState(new Set());
@@ -3230,6 +3943,14 @@ const ToCampusApp = () => {
     ));
   };
   
+  const handleMarkAllRead = () => {
+    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+  };
+  
+  const handleDeleteNotification = (notificationId) => {
+    setNotifications(prev => prev.filter(n => n.id !== notificationId));
+  };
+  
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
   // Get avatar for user
@@ -3555,70 +4276,25 @@ const ToCampusApp = () => {
         )}
         
         {activeTab === 'groups' && (
-          <div>
-            {/* Search Bar */}
-            <div className="mb-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-3 text-gray-400" size={20} />
-                <input
-                  type="text"
-                  placeholder="Search groups..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-gray-800 text-white pl-10 pr-4 py-3 rounded-xl border border-gray-700 focus:border-purple-500 focus:outline-none transition"
-                />
-              </div>
-            </div>
-            
-            <h2 className="text-white text-xl font-bold mb-4">
-              Campus Groups
-              <span className="text-gray-400 text-sm font-normal ml-2">({filteredGroups.length})</span>
-            </h2>
-            
-            {filteredGroups.length === 0 ? (
-              <div className="text-center py-8 text-gray-400">
-                <Users size={40} className="mx-auto mb-2 opacity-50" />
-                <p>{searchQuery ? 'No groups match your search' : 'No groups available'}</p>
-              </div>
-            ) : (
-              filteredGroups.map(group => (
-                <GroupCard
-                  key={group.id}
-                  group={group}
-                  onJoin={handleJoinGroup}
-                  onViewDetails={handleViewGroupDetails}
-                  isMember={joinedGroups.has(group.id)}
-                />
-              ))
-            )}
-          </div>
+          <GroupsView
+            groups={groups}
+            joinedGroups={joinedGroups}
+            onJoinGroup={handleJoinGroup}
+            onViewDetails={handleViewGroupDetails}
+            authToken={authToken}
+            currentUser={currentUser}
+          />
         )}
         
         {activeTab === 'notifications' && (
-          <div>
-            <h2 className="text-white text-xl font-bold mb-4">
-              Notifications
-              {unreadCount > 0 && (
-                <span className="ml-2 bg-purple-600 text-white text-xs px-2 py-1 rounded-full">
-                  {unreadCount}
-                </span>
-              )}
-            </h2>
-            {notifications.length === 0 ? (
-              <div className="text-center py-8 text-gray-400">
-                <Bell size={40} className="mx-auto mb-2 opacity-50" />
-                <p>No notifications</p>
-              </div>
-            ) : (
-              notifications.map(notification => (
-                <NotificationItem
-                  key={notification.id}
-                  notification={notification}
-                  onMarkRead={handleMarkRead}
-                />
-              ))
-            )}
-          </div>
+          <NotificationsView
+            notifications={notifications}
+            onMarkRead={handleMarkRead}
+            onMarkAllRead={handleMarkAllRead}
+            onDelete={handleDeleteNotification}
+            authToken={authToken}
+            onNavigate={(tab) => setActiveTab(tab)}
+          />
         )}
         
         {activeTab === 'profile' && (
@@ -3686,6 +4362,30 @@ const ToCampusApp = () => {
                 </div>
               )}
               
+              {/* Quick Access Buttons */}
+              <div className="bg-gray-800 rounded-xl p-4">
+                <h3 className="text-white font-semibold mb-3 flex items-center">
+                  <MoreHorizontal size={18} className="mr-2 text-gray-400" />
+                  More Features
+                </h3>
+                <div className="grid grid-cols-2 gap-2">
+                  <button 
+                    onClick={() => setActiveTab('marketplace')}
+                    className="flex flex-col items-center p-3 bg-gray-700/50 hover:bg-gray-700 rounded-xl transition"
+                  >
+                    <ShoppingBag size={24} className="text-green-400 mb-1" />
+                    <span className="text-white text-sm">Marketplace</span>
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('chat')}
+                    className="flex flex-col items-center p-3 bg-gray-700/50 hover:bg-gray-700 rounded-xl transition"
+                  >
+                    <Bot size={24} className="text-purple-400 mb-1" />
+                    <span className="text-white text-sm">Assistant</span>
+                  </button>
+                </div>
+              </div>
+              
               {/* User Interests Section */}
               <div className="bg-gray-800 rounded-xl p-4">
                 <h3 className="text-white font-semibold mb-3 flex items-center">
@@ -3711,9 +4411,40 @@ const ToCampusApp = () => {
             </div>
           </div>
         )}
+        
+        {/* Marketplace Tab */}
+        {activeTab === 'marketplace' && (
+          <MarketplaceView authToken={authToken} currentUser={currentUser} />
+        )}
+        
+        {/* Chat/Assistant Tab */}
+        {activeTab === 'chat' && (
+          <ChatbotView authToken={authToken} currentUser={currentUser} />
+        )}
       </div>
       
-      <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+      {/* Quick Access Menu Floating Button - only show on main tabs */}
+      {['feed', 'events', 'groups', 'profile'].includes(activeTab) && (
+        <button
+          onClick={() => setShowQuickAccess(true)}
+          className="fixed bottom-24 right-4 w-12 h-12 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full shadow-lg flex items-center justify-center z-40 hover:scale-105 transition-transform"
+        >
+          <MoreHorizontal size={24} className="text-white" />
+        </button>
+      )}
+      
+      <QuickAccessMenu 
+        isOpen={showQuickAccess} 
+        onClose={() => setShowQuickAccess(false)}
+        onNavigate={(tab) => setActiveTab(tab)}
+        currentUser={currentUser}
+      />
+      
+      <BottomNav 
+        activeTab={activeTab} 
+        onTabChange={setActiveTab} 
+        unreadNotifications={unreadCount}
+      />
     </div>
   );
 };
