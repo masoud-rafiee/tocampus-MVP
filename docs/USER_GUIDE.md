@@ -1,14 +1,18 @@
-# ToCampus User Guide
+# ToCampus User Guide v3.0
 
 ## Table of Contents
 1. [Getting Started](#getting-started)
 2. [Authentication](#authentication)
-3. [Feed & Announcements](#feed--announcements)
-4. [Events](#events)
-5. [Groups](#groups)
-6. [Notifications](#notifications)
-7. [Profile](#profile)
-8. [Role-Based Features](#role-based-features)
+3. [Navigation](#navigation)
+4. [Feed & Announcements](#feed--announcements)
+5. [Events](#events)
+6. [Groups](#groups)
+7. [Notifications](#notifications)
+8. [Quick Access Menu](#quick-access-menu)
+9. [Marketplace](#marketplace)
+10. [Campus Assistant](#campus-assistant)
+11. [Profile](#profile)
+12. [Role-Based Features](#role-based-features)
 
 ---
 
@@ -55,6 +59,42 @@
 1. Navigate to the **Profile** tab (bottom navigation)
 2. Click the **"Logout"** button
 3. You'll be redirected to the login screen
+
+---
+
+## Navigation
+
+ToCampus v3.0 uses a two-tier navigation system for optimal mobile experience.
+
+### Bottom Navigation Bar (Primary)
+
+The bottom navigation bar provides quick access to main sections:
+
+| Tab | Icon | Description |
+|-----|------|-------------|
+| **Feed** | 🏠 Home | Main announcement feed |
+| **Events** | 📅 Calendar | Campus events and RSVPs |
+| **Groups** | 👥 Users | Campus groups and clubs |
+| **Alerts** | 🔔 Bell | Notifications (shows unread count) |
+| **Profile** | 👤 User | Your account and settings |
+
+**Note:** The Alerts tab shows a red badge with the number of unread notifications.
+
+### Quick Access Menu (Secondary)
+
+The Quick Access Menu is a **floating action button (FAB)** located in the bottom-right corner.
+
+**To open:** Tap the purple ✨ button
+
+**Menu options:**
+| Item | Icon | Description |
+|------|------|-------------|
+| **Marketplace** | 🛒 | Buy/sell textbooks, electronics |
+| **Assistant** | 🤖 | AI-powered campus chatbot |
+| **Discover** | 🔍 | Search across all content |
+| **Settings** | ⚙️ | App preferences |
+
+**To close:** Tap the X button or tap outside the menu
 
 ---
 
@@ -125,10 +165,13 @@ The Feed is your main dashboard showing all campus announcements.
 ### Viewing Groups
 1. Navigate to the **Groups** tab (bottom navigation)
 2. Browse available campus groups and clubs
-3. Each group card shows:
+3. Use the **search bar** to find specific groups
+4. Use **category filters** to browse by type:
+   - All, Academic, Sports, Arts, Tech, Social, Career
+5. Each group card shows:
    - Group name and description
    - Member count
-   - Category
+   - Category badge
 
 ### Joining a Group
 1. Find a group you want to join
@@ -142,31 +185,157 @@ The Feed is your main dashboard showing all campus announcements.
 3. Confirm leaving the group
 4. You're removed from the member list
 
+### Creating a Group (Staff/Faculty/Admin only)
+1. Navigate to the **Groups** tab
+2. Click the **"+ New Group"** button (top right)
+3. Fill in the group details:
+   - **Group Name**: A clear, descriptive name
+   - **Description**: What the group is about
+   - **Category**: Select from dropdown
+4. Click **"Create Group"**
+5. Your new group will appear in the groups list
+
 ### Group Categories
 - **Academic**: Study groups, research clubs
 - **Sports**: Athletic teams, fitness clubs
 - **Arts**: Music, theater, visual arts
 - **Technology**: Coding clubs, tech organizations
 - **Social**: Interest-based communities
+- **Career**: Professional development groups
 
 ---
 
 ## Notifications
 
-### Viewing Notifications
-1. Navigate to the **Notifications** tab (bottom navigation)
-2. View all your notifications
-3. Unread notifications have a **blue dot** indicator
+### Accessing Notifications
+1. Navigate to the **Alerts** tab (bottom navigation)
+2. The tab shows a badge with unread count
+
+### Enhanced Notification Center (v3.0)
+
+The notification center includes powerful filtering and management features:
+
+**Time-Based Grouping:**
+- **Today**: Notifications from today
+- **Yesterday**: Notifications from yesterday
+- **This Week**: Notifications from the past 7 days
+- **Older**: Notifications older than 7 days
+
+**Type Filters:**
+- **All**: Show all notifications
+- **Events**: Event reminders, RSVP confirmations
+- **Groups**: Group invites, announcements
+- **System**: Account notifications
+
+### Managing Notifications
+- **Mark as Read**: Tap any notification to mark it as read
+- **Mark All as Read**: Tap "Mark all read" button at the top
+- **Settings**: Tap the gear icon to configure preferences
+
+### Notification Settings
+Tap the ⚙️ icon to configure:
+- Event reminders (on/off)
+- Group updates (on/off)
+- New announcements (on/off)
+- System notifications (on/off)
 
 ### Notification Types
 - **Event Reminder**: Upcoming event you've RSVP'd to
 - **RSVP Confirmation**: Confirmation of your event registration
 - **New Announcement**: New post in a group you follow
 - **Event Approved**: Your event has been approved by admin
+- **Group Invite**: Invitation to join a group
+- **New Follower**: Someone followed your profile
 
-### Marking as Read
-- Click on any notification to mark it as read
-- The blue dot disappears
+### Visual Indicators
+- **Unread**: Blue dot + purple/blue gradient background
+- **Read**: Standard gray background
+
+---
+
+## Quick Access Menu
+
+The Quick Access Menu provides shortcuts to secondary features without cluttering the main navigation.
+
+### Opening the Menu
+1. Look for the purple ✨ button in the bottom-right corner
+2. Tap to expand the menu
+3. Four options slide up with animation
+
+### Menu Options
+
+**🛒 Marketplace**
+Access the buy/sell marketplace (see Marketplace section)
+
+**🤖 Assistant**
+Open the AI campus assistant (see Campus Assistant section)
+
+**🔍 Discover**
+Search across events, groups, and announcements
+
+**⚙️ Settings**
+Access app settings and preferences
+
+### Closing the Menu
+- Tap the X button
+- Tap anywhere outside the menu
+- Select a menu option (menu closes after navigation)
+
+---
+
+## Marketplace
+
+### Accessing Marketplace
+1. Tap the **Quick Access Menu** (✨ button, bottom-right)
+2. Select **"Marketplace"** (🛒 icon)
+
+### Browsing Listings
+- View listings organized by category
+- Use the search bar to find specific items
+- Filter by:
+  - **Category**: Textbooks, Electronics, Furniture, Clothing, Other
+  - **Price Range**: Set min/max price
+  - **Condition**: Like New, Excellent, Good, Fair, Poor
+
+### Creating a Listing
+1. Tap the **"+ Sell Item"** button
+2. Fill in listing details:
+   - Title
+   - Description
+   - Price
+   - Category
+   - Condition
+   - Pickup Location
+3. Tap **"Post Listing"**
+
+### Contacting Sellers
+1. Find a listing you're interested in
+2. Tap **"Message Seller"**
+3. Send your inquiry
+4. Wait for seller response
+
+---
+
+## Campus Assistant
+
+### Accessing the Assistant
+1. Tap the **Quick Access Menu** (✨ button, bottom-right)
+2. Select **"Assistant"** (🤖 icon)
+
+### Using the Chatbot
+The campus assistant uses AI to help you find information:
+
+**Example queries:**
+- "What events are happening this week?"
+- "Show me tech groups I can join"
+- "Find study groups for Computer Science"
+- "What's new on campus?"
+
+### Features
+- **Natural Language**: Ask questions in plain English
+- **Contextual Suggestions**: Get follow-up suggestions
+- **Quick Links**: Tap to navigate directly to events/groups
+- **Conversation History**: Previous messages are preserved
 
 ---
 
@@ -201,13 +370,14 @@ The Feed is your main dashboard showing all campus announcements.
 All Student features, plus:
 - **Create Events**: Post new campus events
 - **Create Announcements**: Post campus-wide or group announcements
-- **Create Groups**: Start new campus groups
+- **Create Groups**: Start new campus groups via the Groups tab
 
 ### Admin Role
 All Staff features, plus:
 - **Approve Events**: Review and approve pending events
 - **Manage Users**: View and manage user accounts
 - **Delete Content**: Remove inappropriate posts or events
+- **View Analytics**: Access platform statistics and audit logs
 
 ---
 
@@ -268,9 +438,10 @@ If you experience issues not covered in this guide:
 - **Feed**: Home icon - View announcements
 - **Events**: Calendar icon - Browse and RSVP to events
 - **Groups**: Users icon - Join campus groups
-- **Notifications**: Bell icon - View alerts
+- **Alerts**: Bell icon - View notifications (with badge)
 - **Profile**: User icon - Account settings
+- **Quick Access (✨)**: Marketplace, Assistant, Discover, Settings
 
 ---
 
-**ToCampus v1.0** | Bishop's University | © 2025
+**ToCampus v3.0** | Bishop's University | © 2025

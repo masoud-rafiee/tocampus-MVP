@@ -1,12 +1,13 @@
-# ToCampus MVP v2.0 - University Social & Event Platform
+# ToCampus v3.0 - University Social & Event Platform
 
 <div align="center">
 
-![ToCampus Logo](https://img.shields.io/badge/ToCampus-v2.0-purple?style=for-the-badge&logo=graduation-cap)
+![ToCampus Logo](https://img.shields.io/badge/ToCampus-v3.0-purple?style=for-the-badge&logo=graduation-cap)
 ![Node.js](https://img.shields.io/badge/Node.js-18+-green?style=flat-square&logo=node.js)
 ![React](https://img.shields.io/badge/React-18-blue?style=flat-square&logo=react)
 ![Tests](https://img.shields.io/badge/Tests-45%20Passing-success?style=flat-square)
 ![SRS](https://img.shields.io/badge/SRS-v3.0-orange?style=flat-square)
+![Status](https://img.shields.io/badge/Status-Production%20Ready-brightgreen?style=flat-square)
 
 **Your Campus. Connected.**
 
@@ -16,9 +17,9 @@
 
 ## 🎓 Project Overview
 
-ToCampus is a comprehensive university social and event management platform designed to unify campus communications. Built as a Phase 1 MVP for Bishop's University with multi-tenant architecture for global scalability.
+ToCampus is a comprehensive university social and event management platform designed to unify campus communications. Built as a **production-ready application** for Bishop's University with multi-tenant architecture for global scalability.
 
-**Implements:** SRS v3.0 (CS-410 Final Project)
+**Implements:** SRS v3.0 (CS-410 Final Project) - **Beyond MVP**
 
 ### ✨ Key Features
 
@@ -27,14 +28,14 @@ ToCampus is a comprehensive university social and event management platform desi
 | **Authentication** | Secure login, university email validation, password reset | FR1-FR4 |
 | **Events** | Creation, RSVP, approval workflow, calendar integration | FR5-FR7 |
 | **Announcements** | Campus-wide posts, comments, likes, sharing | FR8-FR10 |
-| **Groups & Clubs** | Membership, group announcements, interest-based | FR12-FR15 |
-| **Marketplace** | Buy/sell textbooks, electronics, furniture | FR37-FR40 |
+| **Groups & Clubs** | Membership, group creation modal, category filters | FR12-FR15 |
+| **Marketplace** | Buy/sell textbooks, electronics, furniture (Quick Access) | FR37-FR40 |
 | **Social Graph** | Follow/unfollow, followers, mutual friends | FR34-FR36 |
 | **Rich Profiles** | Bio, program, interests, privacy settings | FR28-FR33 |
 | **Recommendations** | AI-powered event/group suggestions | FR41-FR43 |
-| **LLM Chatbot** | Campus assistant with natural language | FR44-FR47 |
+| **LLM Chatbot** | Campus assistant with natural language (Quick Access) | FR44-FR47 |
 | **Admin Dashboard** | Analytics, audit logs, moderation | FR24-FR27 |
-| **Notifications** | Real-time alerts, preferences | FR20-FR23 |
+| **Notifications** | **Enhanced notification center** with filters, settings | FR20-FR23 |
 
 ---
 
@@ -44,15 +45,19 @@ ToCampus is a comprehensive university social and event management platform desi
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                      ToCampus Platform                       │
+│                      ToCampus Platform v3.0                  │
 ├─────────────────────────────────────────────────────────────┤
 │  Frontend (React 18 + Tailwind CSS)                          │
 │  ├── Authentication Flow (Splash, Login, Register)          │
 │  ├── Feed with Recommendations                               │
-│  ├── Events & Groups Management                              │
-│  ├── Marketplace (Buy/Sell)                                  │
-│  ├── Campus Assistant (Chatbot)                              │
-│  └── User Profiles with Social Graph                        │
+│  ├── Events & Groups Management (with Create Modal)         │
+│  ├── **Enhanced Notifications** (filters, time groups)      │
+│  ├── User Profiles with Social Graph                        │
+│  └── **Quick Access Menu** (Marketplace, Assistant, etc.)   │
+├─────────────────────────────────────────────────────────────┤
+│  Navigation Structure                                        │
+│  ├── Bottom Nav: Feed → Events → Groups → Alerts → Profile  │
+│  └── Quick Access (FAB): Marketplace, Chatbot, Discover     │
 ├─────────────────────────────────────────────────────────────┤
 │  Backend API (Express.js + JWT)                              │
 │  ├── 48 RESTful Endpoints                                   │
@@ -143,35 +148,64 @@ cd frontend && npm test
 
 ## 📱 Features Walkthrough
 
-### 1. Feed & Recommendations (FR41-43)
-- Personalized content based on interests and social graph
-- Recommendation scores shown for each item
-- Swipe through suggested events
+### Navigation Structure (v3.0)
 
-### 2. Marketplace (FR37-40)
+**Bottom Navigation Bar (5 tabs):**
+| Tab | Icon | Description |
+|-----|------|-------------|
+| Feed | 🏠 | Main announcement feed with recommendations |
+| Events | 📅 | Browse and RSVP to campus events |
+| Groups | 👥 | Join groups, create new groups (Staff+) |
+| Alerts | 🔔 | **Enhanced notifications** with badge count |
+| Profile | 👤 | Account settings and profile management |
+
+**Quick Access Menu (Floating Action Button):**
+| Item | Icon | Description |
+|------|------|-------------|
+| Marketplace | 🛒 | Buy/sell textbooks, electronics, furniture |
+| Assistant | 🤖 | AI-powered campus chatbot |
+| Discover | 🔍 | Search across events, groups, announcements |
+| Settings | ⚙️ | App settings and preferences |
+
+### 1. Enhanced Notifications (FR20-23) ⭐ NEW
+- **Time-based grouping:** Today, Yesterday, This Week, Older
+- **Type filters:** All, Events, Groups, System
+- **Settings panel:** Configure notification preferences
+- **Mark all as read** with one tap
+- **Unread badge** on navigation tab
+
+### 2. Enhanced Groups (FR12-15) ⭐ IMPROVED
+- **Category filters:** Academic, Sports, Arts, Tech, Social, Career
+- **Search functionality:** Find groups by name or description
+- **Create Group Modal:** Staff/Faculty can create new groups
+- **Member counts** and category badges
+
+### 3. Marketplace (FR37-40) - Quick Access
 - Browse categories: Textbooks, Electronics, Furniture, Clothing
 - Filter by price, condition, search terms
 - Message sellers directly
 - Create listings with photos and details
+- **Access via Quick Access Menu (FAB)**
 
-### 3. Campus Assistant (FR44-47)
+### 4. Campus Assistant (FR44-47) - Quick Access
 - Natural language queries: "What events are happening?"
 - Contextual suggestions
 - Links to relevant content (events, groups, listings)
+- **Access via Quick Access Menu (FAB)**
 
-### 4. Social Graph (FR34-36)
+### 5. Social Graph (FR34-36)
 - Follow other students
 - View followers/following lists
 - Discover mutual friends
 - Profile privacy controls
 
-### 5. Rich Profiles (FR28-33)
+### 6. Rich Profiles (FR28-33)
 - Program and year of study
 - Interests selection
 - Social links (LinkedIn, Instagram, etc.)
 - Privacy settings (visibility controls)
 
-### 6. Admin Dashboard (FR24-27)
+### 7. Admin Dashboard (FR24-27)
 - Real-time analytics (users, events, engagement)
 - Audit log viewer
 - Event approval queue
@@ -249,8 +283,9 @@ tocampus-MVP/
 │   └── package.json
 ├── frontend/
 │   ├── src/
-│   │   ├── App.jsx         # Main React app (~3700 lines)
+│   │   ├── App.jsx         # Main React app (~4500 lines)
 │   │   ├── App.test.js     # Frontend tests
+│   │   ├── index.css       # Tailwind + custom animations
 │   │   └── index.js
 │   └── package.json
 ├── docs/
@@ -260,7 +295,8 @@ tocampus-MVP/
 │   └── DEPLOYMENT_GUIDE.md
 ├── .github/
 │   └── workflows/
-│       └── ci-cd.yml       # GitHub Actions pipeline
+│       └── ci.yml          # GitHub Actions pipeline
+├── MODULES_DESCRIPTION.md  # Detailed module documentation
 └── package.json
 ```
 
@@ -272,8 +308,8 @@ tocampus-MVP/
 
 The project uses GitHub Actions with 3 stages:
 
-1. **Backend Tests** - Run Jest tests
-2. **Frontend Tests** - Run React tests
+1. **Backend Tests** - Run Jest tests (36 tests)
+2. **Frontend Tests & Build** - Run React tests, build production bundle
 3. **Deploy** - Deploy to Vercel/Railway
 
 ```yaml
@@ -281,6 +317,11 @@ The project uses GitHub Actions with 3 stages:
 on:
   push:
     branches: [main]
+
+# Build configuration
+env:
+  CI: false                    # Allows build with warnings
+  DISABLE_ESLINT_PLUGIN: true  # Cleaner build output
 ```
 
 ### Manual Deployment
@@ -298,16 +339,19 @@ vercel --prod
 
 ## 📈 Roadmap
 
-### Phase 1 (Current) ✅
+### Phase 1 (Current - v3.0) ✅ PRODUCTION READY
 - [x] Authentication & Authorization
 - [x] Events & RSVP
 - [x] Announcements & Comments
-- [x] Groups & Membership
-- [x] Marketplace
+- [x] Groups & Membership + **Create Group Modal**
+- [x] Marketplace (via Quick Access)
 - [x] Social Graph
 - [x] Recommendations
-- [x] Chatbot
+- [x] Chatbot (via Quick Access)
 - [x] Admin Dashboard
+- [x] **Enhanced Notifications** (filters, time groups, settings)
+- [x] **Quick Access Menu** (FAB)
+- [x] **Bottom Nav with Badge Support**
 
 ### Phase 2 (Planned)
 - [ ] Real-time messaging (WebSocket)

@@ -51,16 +51,137 @@ ToCampus is implemented as a modular monolith with clear separation between fron
 
 **Responsibilities:**
 - Tab switching between main sections (Feed, Events, Groups, Notifications, Profile)
-- Visual feedback for active tab
+- Visual feedback for active tab with animated indicator
 - Icon-based navigation with labels
+- **Notification badge** showing unread count with pulsing animation
 
 **Design Pattern:** Tab bar navigation (iOS/Android standard)
+
+**Navigation Tabs:**
+| Tab | Icon | Label | Description |
+|-----|------|-------|-------------|
+| Feed | Home | Feed | Main announcement feed |
+| Events | Calendar | Events | Campus events |
+| Groups | Users | Groups | Campus groups & clubs |
+| Notifications | Bell | Alerts | Real-time notifications (with badge) |
+| Profile | User | Profile | User account & settings |
+
+**Badge System:**
+- Shows count of unread notifications
+- Displays "99+" for counts over 99
+- Animated pulse effect for visibility
+- Red background with white text
 
 **Accessibility:** Clear labels, adequate touch targets (44x44px minimum)
 
 ---
 
-### **4. EventCard Component**
+### **4. QuickAccessMenu Component (NEW - v3.0)**
+
+**Purpose:** Floating action button menu for secondary navigation
+
+**Responsibilities:**
+- Provide quick access to secondary features without cluttering main navigation
+- Animated expand/collapse with smooth transitions
+- Backdrop blur overlay when opened
+
+**Menu Items:**
+| Item | Icon | Action |
+|------|------|--------|
+| Marketplace | ShoppingBag | Navigate to buy/sell marketplace |
+| Assistant | Bot | Open campus AI chatbot |
+| Discover | Compass | Search and discovery view |
+| Settings | Settings | User settings panel |
+
+**UI Features:**
+- Purple gradient floating action button (FAB)
+- Bottom-right positioning above safe area
+- Slide-up animation for menu items
+- Click outside to close
+
+**Design Pattern:** Material Design Floating Action Button with speed dial
+
+---
+
+### **5. NotificationsView Component (NEW - v3.0)**
+
+**Purpose:** Enhanced notification center with filtering and management
+
+**Responsibilities:**
+- Display all user notifications with time-based grouping
+- Filter notifications by type (All, Events, Groups, System)
+- Mark all as read functionality
+- Settings panel for notification preferences
+
+**Features:**
+- **Time Grouping:** Today, Yesterday, This Week, Older
+- **Type Filters:** All, Events, Groups, System (with pill-style buttons)
+- **Unread Indicators:** Blue dot and gradient background for unread items
+- **Settings Panel:** Toggle notification preferences
+
+**Notification Types:**
+- EVENT_REMINDER - Upcoming event alerts
+- EVENT_APPROVED - Admin approval notices
+- NEW_ANNOUNCEMENT - New post notifications  
+- RSVP_CONFIRMATION - Event registration confirmations
+- GROUP_INVITE - Group invitation received
+- NEW_FOLLOWER - Someone followed you
+
+**Visual States:**
+- Unread: Purple/blue gradient background with glowing border
+- Read: Standard gray background
+
+---
+
+### **6. GroupsView Component (Enhanced - v3.0)**
+
+**Purpose:** Enhanced groups browsing and creation interface
+
+**Responsibilities:**
+- Display all campus groups with search and filtering
+- Category-based filtering (All, Academic, Sports, Arts, Tech, Social, Career)
+- Group creation modal for authorized users
+- Join/leave group functionality
+
+**Features:**
+- **Search Bar:** Filter groups by name or description
+- **Category Pills:** Horizontal scrollable category filters with icons
+- **Create Group Button:** Opens CreateGroupModal (Staff/Faculty/Admin only)
+- **Group Cards:** Enhanced cards with member count, category badges
+
+**Categories with Icons:**
+| Category | Icon | Description |
+|----------|------|-------------|
+| All | LayoutGrid | Show all groups |
+| Academic | BookOpen | Study groups, research clubs |
+| Sports | Dumbbell | Athletic teams, fitness |
+| Arts | Palette | Music, theater, visual arts |
+| Tech | Code | Coding clubs, tech orgs |
+| Social | Coffee | Interest-based communities |
+| Career | Target | Professional development |
+
+---
+
+### **7. CreateGroupModal Component (NEW - v3.0)**
+
+**Purpose:** Modal dialog for creating new campus groups
+
+**Responsibilities:**
+- Collect group information (name, description, category)
+- Validate input before submission
+- Submit to backend API
+- Handle success/error states
+
+**Form Fields:**
+- Group Name (required, text input)
+- Description (required, textarea)
+- Category (required, dropdown select)
+
+**Authorization:** Only visible to Staff, Faculty, and Admin roles
+
+---
+
+### **8. EventCard Component**
 
 **Purpose:** Display and interact with campus events
 
@@ -70,6 +191,7 @@ ToCampus is implemented as a modular monolith with clear separation between fron
 - RSVP button with toggle state
 - Category badge
 - Visual date formatting ("Tomorrow", "In 3 days", etc.)
+- Share functionality
 
 **Data Flow:**
 ```
@@ -81,10 +203,11 @@ Event data → EventCard → User interaction → State update → UI refresh
 - Card-based layout with rounded corners
 - Icon-enhanced metadata (clock, location, attendees)
 - Color-coded RSVP button (purple for action, green for confirmed)
+- Share button for social media sharing
 
 ---
 
-### **5. AnnouncementCard Component**
+### **9. AnnouncementCard Component**
 
 **Purpose:** Social media-style feed posts
 
@@ -109,7 +232,7 @@ User views → Can like → Can comment → Can share
 
 ---
 
-### **6. GroupCard Component**
+### **10. GroupCard Component**
 
 **Purpose:** Campus group/club discovery and joining
 
@@ -126,9 +249,9 @@ Browse groups → View details → Join → Access group content
 
 ---
 
-### **7. NotificationItem Component**
+### **11. NotificationItem Component**
 
-**Purpose:** Real-time notification display
+**Purpose:** Individual notification display within NotificationsView
 
 **Responsibilities:**
 - Show notification type, title, message
@@ -145,6 +268,37 @@ Browse groups → View details → Join → Access group content
 **Visual States:**
 - Unread: Purple/blue gradient background with glowing border
 - Read: Standard gray background
+
+---
+
+### **12. MarketplaceView Component**
+
+**Purpose:** Buy/sell marketplace for campus community
+
+**Access:** Via Quick Access Menu (floating action button)
+
+**Responsibilities:**
+- Display listings by category
+- Search and filter functionality
+- Create new listings
+- Contact sellers
+
+**Categories:**
+- Textbooks, Electronics, Furniture, Clothing, Other
+
+---
+
+### **13. ChatbotDrawer Component (Campus Assistant)**
+
+**Purpose:** AI-powered campus assistant
+
+**Access:** Via Quick Access Menu (floating action button)
+
+**Responsibilities:**
+- Natural language conversation
+- Answer campus questions
+- Provide event/group suggestions
+- Context-aware responses
 
 ---
 
@@ -541,15 +695,24 @@ Services receive dependencies (e.g., NotificationService, SocialIntegrationServi
 | FR6: Announcements | AnnouncementService | ✅ |
 | FR6a: Social Media Selection | SocialIntegrationService | ✅ |
 | FR6b: Cross-Posting | SocialIntegrationService | ✅ |
-| FR7: Group Creation | GroupService | ✅ |
+| FR7: Group Creation | GroupService, CreateGroupModal | ✅ |
 | FR8: Group Announcements | AnnouncementService | ✅ |
 | FR9: Group Notifications | NotificationService | ✅ |
 | FR10: Real-Time Messaging | MessageService | 🔄 Phase 2 |
-| FR12: Notifications | NotificationService | ✅ |
-| FR13: Personalized Feed | Frontend | ✅ |
+| FR12: Notifications | NotificationService, NotificationsView | ✅ |
+| FR13: Personalized Feed | Frontend (FeedView) | ✅ |
+| FR28-33: Rich Profiles | UserProfileView | ✅ |
+| FR34-36: Social Graph | FollowService | ✅ |
+| FR37-40: Marketplace | MarketplaceView | ✅ |
+| FR41-43: Recommendations | RecommendationService | ✅ |
+| FR44-47: Chatbot | ChatbotDrawer, ChatbotService | ✅ |
+| Navigation: Bottom Nav | BottomNav (5 tabs w/ badge) | ✅ |
+| Navigation: Quick Access | QuickAccessMenu (FAB) | ✅ |
+| UI/UX: Groups Enhancement | GroupsView, CreateGroupModal | ✅ |
+| UI/UX: Notifications Enhancement | NotificationsView (filters, settings) | ✅ |
 
 ✅ = Implemented | 🔄 = Planned for Phase 2
 
 ---
 
-**This modular design ensures maintainability, testability, and future scalability while meeting all Phase 1 MVP requirements specified in the SRS and architecture documents.**
+**This modular design ensures maintainability, testability, and future scalability while meeting all Phase 1 requirements specified in the SRS and going beyond MVP to production-ready state.**
