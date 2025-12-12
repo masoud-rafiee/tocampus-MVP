@@ -1,4 +1,10 @@
-# ToCampus MVP - System Architecture
+# ToCampus v3.0 - System Architecture & Design
+
+**Version:** 3.0 (Production-Ready)  
+**Status:** FINAL - Beyond MVP  
+**Last Updated:** December 12, 2025
+
+---
 
 ## 1. High-Level Architecture
 
@@ -317,4 +323,48 @@
 
 ---
 
-*This architecture document aligns with the Software Requirements Specification (SRS) for the ToCampus MVP system.*
+## 9. UML Diagrams (SRS v3.0 Complete)
+
+### 9.1 Use Case Diagram
+Shows 55 use cases across 3 actor types (Student, Staff, Admin) with inheritance hierarchy.
+
+**Download PlantUML code:** See `SRS_v3.0.md` Section 2.1
+
+### 9.2 Class Diagram (Domain Model)
+Shows 18 core entities (User, Event, Group, Post, etc.) with methods and relationships.
+
+**Download PlantUML code:** See `SRS_v3.0.md` Section 2.2
+
+### 9.3 Component Diagram
+Shows modular monolith with Frontend (React), Backend (Express), and External Services.
+
+**Download PlantUML code:** See `SRS_v3.0.md` Section 2.3
+
+### 9.4 Deployment Diagram Phase 1
+Shows MVP architecture: Vercel + Render + MongoDB Atlas
+
+**Download PlantUML code:** See `SRS_v3.0.md` Section 2.4
+
+### 9.5 Deployment Diagram Phase 2
+Shows microservices architecture on AWS EKS with independent services.
+
+**Download PlantUML code:** See `SRS_v3.0.md` Section 2.4
+
+### 9.6 Sequence Diagram - Event Flow
+Shows complete sequence: Event creation → Approval → RSVP → Notifications
+
+**Download PlantUML code:** See `SRS_v3.0.md` Section 2.5
+
+### 9.7 Sequence Diagram - Chat Message (Phase 2)
+Shows WebSocket real-time messaging flow with delivery confirmation.
+
+**Download PlantUML code:** See `SRS_v3.0.md` Section 2.6
+
+### 9.8 State Diagram - Event Lifecycle
+Shows event state machine: Draft → Pending → Approved → Completed/Cancelled
+
+**Download PlantUML code:** See `SRS_v3.0.md` Section 2.7
+
+---
+
+*This architecture document aligns with the Software Requirements Specification (SRS) v3.0 for the ToCampus production-ready system.*
