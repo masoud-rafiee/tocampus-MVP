@@ -909,6 +909,55 @@ app.post('/api/events/:id/approve', authenticateToken, (req, res) => {
   res.json(event);
 });
 
+// Event Rejection (SRS FR5 - Admin workflow)
+// Admin can reject events that violate university policy
+app.post('/api/events/:id/reject', authenticateToken, (req, res) => {
+  // Only admins can reject events
+  if (req.user.role !== 'ADMIN') {
+    return res.status(403).json({ error: 'Only admins can reject events' });
+  }
+
+  const event = DB.events.get(req.params.id);
+  if (!event) {
+    return res.status(404).json({ error: 'Event not found' });
+  }
+
+  const { reason } = req.body;
+
+  event.status = 'REJECTED';
+  event.isApproved = false;
+  event.rejectedAt = new Date().toISOString();
+  event.rejectedBy = req.user.id;
+  event.rejectionReason = reason || 'Violates university policy';
+
+  // Log rejection action in audit log (FR25)
+  const auditId = uuidv4();
+  DB.auditLogs.set(auditId, {
+    id: auditId,
+    universityId: req.user.universityId,
+    actorId: req.user.id,
+    actionType: 'EVENT_REJECTED',
+    entityType: 'Event',
+    entityId: event.id,
+    timestamp: new Date().toISOString(),
+    details: { title: event.title, reason: reason || 'Policy violation' }
+  });
+
+  // Notify the event creator
+  const notifId = uuidv4();
+  DB.notifications.set(notifId, {
+    id: notifId,
+    userId: event.creatorId,
+    type: 'EVENT_REJECTED',
+    title: '❌ Event Rejected',
+    message: `Your event "${event.title}" was rejected. Reason: ${reason || 'Violates university policy'}`,
+    isRead: false,
+    createdAt: new Date().toISOString()
+  });
+
+  res.json(event);
+});
+
 // Event Publication (SRS FR4)
 app.post('/api/events/:id/publish', authenticateToken, (req, res) => {
   const event = DB.events.get(req.params.id);
@@ -1291,6 +1340,105 @@ app.post('/api/announcements', authenticateToken, (req, res) => {
   }
 
   res.status(201).json(newAnnouncement);
+});
+
+// Announcement Approval (SRS FR8 - Admin workflow - Policy Compliance Check)
+// Admin reviews announcement to ensure it follows university policy before publishing
+app.post('/api/announcements/:id/approve', authenticateToken, (req, res) => {
+  // Only admins can approve announcements after policy review
+  if (req.user.role !== 'ADMIN') {
+    return res.status(403).json({ error: 'Only admins can approve announcements' });
+  }
+
+  const announcement = DB.announcements.get(req.params.id);
+  if (!announcement) {
+    return res.status(404).json({ error: 'Announcement not found' });
+  }
+
+  // Admin must provide reason/notes for approval (optional in this implementation)
+  const { policyNotes } = req.body;
+
+  announcement.isApproved = true;
+  announcement.status = 'PUBLISHED';
+  announcement.approvedAt = new Date().toISOString();
+  announcement.approvedBy = req.user.id;
+  announcement.policyNotes = policyNotes || 'Approved by admin - follows university policy';
+
+  // Log approval action in audit log (FR25)
+  const auditId = uuidv4();
+  DB.auditLogs.set(auditId, {
+    id: auditId,
+    universityId: req.user.universityId,
+    actorId: req.user.id,
+    actionType: 'ANNOUNCEMENT_APPROVED',
+    entityType: 'Announcement',
+    entityId: announcement.id,
+    timestamp: new Date().toISOString(),
+    details: { title: announcement.title, reason: policyNotes || 'Standard policy compliance check' }
+  });
+
+  // Notify the announcement author
+  const notifId = uuidv4();
+  DB.notifications.set(notifId, {
+    id: notifId,
+    userId: announcement.authorId,
+    type: 'ANNOUNCEMENT_APPROVED',
+    title: '✅ Announcement Approved',
+    message: `Your announcement "${announcement.title || 'Untitled'}" has been approved by admin and is now published`,
+    isRead: false,
+    createdAt: new Date().toISOString()
+  });
+
+  res.json(announcement);
+});
+
+// Announcement Rejection (SRS FR8 - Admin workflow)
+// Admin can reject announcements that violate university policy
+app.post('/api/announcements/:id/reject', authenticateToken, (req, res) => {
+  // Only admins can reject announcements
+  if (req.user.role !== 'ADMIN') {
+    return res.status(403).json({ error: 'Only admins can reject announcements' });
+  }
+
+  const announcement = DB.announcements.get(req.params.id);
+  if (!announcement) {
+    return res.status(404).json({ error: 'Announcement not found' });
+  }
+
+  const { reason } = req.body;
+
+  announcement.status = 'REJECTED';
+  announcement.isApproved = false;
+  announcement.rejectedAt = new Date().toISOString();
+  announcement.rejectedBy = req.user.id;
+  announcement.rejectionReason = reason || 'Violates university policy';
+
+  // Log rejection action in audit log (FR25)
+  const auditId = uuidv4();
+  DB.auditLogs.set(auditId, {
+    id: auditId,
+    universityId: req.user.universityId,
+    actorId: req.user.id,
+    actionType: 'ANNOUNCEMENT_REJECTED',
+    entityType: 'Announcement',
+    entityId: announcement.id,
+    timestamp: new Date().toISOString(),
+    details: { title: announcement.title, reason: reason || 'Policy violation' }
+  });
+
+  // Notify the announcement author
+  const notifId = uuidv4();
+  DB.notifications.set(notifId, {
+    id: notifId,
+    userId: announcement.authorId,
+    type: 'ANNOUNCEMENT_REJECTED',
+    title: '❌ Announcement Rejected',
+    message: `Your announcement "${announcement.title || 'Untitled'}" was rejected. Reason: ${reason || 'Violates university policy'}`,
+    isRead: false,
+    createdAt: new Date().toISOString()
+  });
+
+  res.json(announcement);
 });
 
 app.post('/api/announcements/:id/like', authenticateToken, (req, res) => {
