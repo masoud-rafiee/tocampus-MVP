@@ -11,6 +11,10 @@
 
 const nodemailer = require('nodemailer');
 
+// Detect test/development environment
+const isTestMode = process.env.NODE_ENV === 'test';
+const isDevelopment = !process.env.EMAIL_USER || process.env.EMAIL_USER === 'noreply@tocampus.local';
+
 // Email configuration (can be customized via env variables)
 const emailConfig = {
   host: process.env.EMAIL_HOST || 'smtp.gmail.com',
@@ -23,7 +27,15 @@ const emailConfig = {
 };
 
 // Create email transporter
-const transporter = nodemailer.createTransport(emailConfig);
+// In test/dev mode with default creds, use test transporter
+const transporter = (isTestMode || isDevelopment) 
+  ? nodemailer.createTransport({ 
+      host: 'localhost',
+      port: 1025,
+      ignoreTLS: true,
+      secure: false
+    })
+  : nodemailer.createTransport(emailConfig);
 
 // Email templates
 const emailTemplates = {
@@ -130,6 +142,12 @@ const emailTemplates = {
  * @param {string} adminDashboardUrl - URL to admin approval queue
  */
 async function sendPendingApprovalNotification(adminEmails, contentType, contentTitle, adminDashboardUrl) {
+  // Skip email sending in test mode
+  if (isTestMode) {
+    console.log(`[TEST MODE] Skipped sending pending approval email to ${adminEmails.length} admin(s)`);
+    return true;
+  }
+
   try {
     const template = emailTemplates.pendingApproval('Admin', contentType, contentTitle, adminDashboardUrl);
     
@@ -159,6 +177,12 @@ async function sendPendingApprovalNotification(adminEmails, contentType, content
  * @param {string} contentTitle - Title of the content
  */
 async function sendApprovalNotification(creatorEmail, creatorName, contentType, contentTitle) {
+  // Skip email sending in test mode
+  if (isTestMode) {
+    console.log(`[TEST MODE] Skipped sending approval notification to ${creatorEmail}`);
+    return true;
+  }
+
   try {
     const approvalTime = new Date().toLocaleDateString('en-US', {
       weekday: 'long',
@@ -193,6 +217,12 @@ async function sendApprovalNotification(creatorEmail, creatorName, contentType, 
  * @param {string} rejectionReason - Reason for rejection
  */
 async function sendRejectionNotification(creatorEmail, creatorName, contentType, contentTitle, rejectionReason) {
+  // Skip email sending in test mode
+  if (isTestMode) {
+    console.log(`[TEST MODE] Skipped sending rejection notification to ${creatorEmail}`);
+    return true;
+  }
+
   try {
     const template = emailTemplates.rejectionNotification(creatorName, contentType, contentTitle, rejectionReason);
     
