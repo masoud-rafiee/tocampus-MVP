@@ -764,12 +764,18 @@ app.get('/api/events', authenticateToken, (req, res) => {
   let events = Array.from(DB.events.values())
     .filter(e => e.universityId === req.user.universityId);
   
-  // Filter by status if provided
-  if (status === 'pending') {
-    events = events.filter(e => !e.isApproved);
+  // Admin can see pending and approved events
+  if (req.user.role === 'ADMIN') {
+    // Admin filter: show pending for approval workflow
+    if (status === 'pending') {
+      events = events.filter(e => e.status === 'PENDING');
+    } else {
+      // Default: show approved and published events
+      events = events.filter(e => e.isApproved === true || e.status === 'PUBLISHED');
+    }
   } else {
-    // Default: only show published events to regular users
-    events = events.filter(e => e.status === 'PUBLISHED');
+    // Regular users (STUDENT, STAFF, FACULTY) only see approved/published events
+    events = events.filter(e => e.isApproved === true || e.status === 'PUBLISHED');
   }
   
   events = events.map(event => ({
@@ -791,6 +797,11 @@ app.get('/api/events/:id', authenticateToken, (req, res) => {
     return res.status(404).json({ error: 'Event not found' });
   }
   
+  // Check authorization: only approved events visible to non-admins, or creator sees own pending events
+  if (req.user.role !== 'ADMIN' && !event.isApproved && event.creatorId !== req.user.id) {
+    return res.status(403).json({ error: 'This event is pending admin approval' });
+  }
+  
   const creator = DB.users.get(event.creatorId);
   const rsvps = (event.rsvpIds || []).map(id => {
     const rsvp = DB.rsvps.get(id);
@@ -808,8 +819,10 @@ app.get('/api/events/:id', authenticateToken, (req, res) => {
 });
 
 app.post('/api/events', authenticateToken, (req, res) => {
-  if (!['STAFF', 'FACULTY', 'ADMIN'].includes(req.user.role)) {
-    return res.status(403).json({ error: 'Only staff and faculty can create events' });
+  // FR5: All registered users (STUDENT, STAFF, FACULTY, ADMIN) can create events
+  // SRS requirement: Events require admin approval before publishing
+  if (!req.user) {
+    return res.status(401).json({ error: 'Authentication required' });
   }
 
   const eventId = uuidv4();
@@ -818,8 +831,8 @@ app.post('/api/events', authenticateToken, (req, res) => {
     universityId: req.user.universityId,
     creatorId: req.user.id,
     ...req.body,
-    status: 'DRAFT',
-    isApproved: false,
+    status: 'PENDING',  // Changed: Requires admin approval
+    isApproved: false,  // Explicitly not approved until admin reviews
     createdAt: new Date().toISOString(),
     rsvpIds: [],
     socialShareIds: []
@@ -846,9 +859,10 @@ app.post('/api/events', authenticateToken, (req, res) => {
   res.status(201).json(newEvent);
 });
 
-// Event Approval (SRS FR4 - Admin workflow)
+// Event Approval (SRS FR5a - Admin workflow - Policy Compliance Check)
+// Admin reviews event to ensure it follows university policy before publishing
 app.post('/api/events/:id/approve', authenticateToken, (req, res) => {
-  // Only admins can approve events
+  // Only admins can approve events after policy review
   if (req.user.role !== 'ADMIN') {
     return res.status(403).json({ error: 'Only admins can approve events' });
   }
@@ -858,7 +872,27 @@ app.post('/api/events/:id/approve', authenticateToken, (req, res) => {
     return res.status(404).json({ error: 'Event not found' });
   }
 
+  // Admin must provide reason/notes for approval (optional in this implementation)
+  const { policyNotes } = req.body;
+
   event.isApproved = true;
+  event.status = 'PUBLISHED';
+  event.approvedAt = new Date().toISOString();
+  event.approvedBy = req.user.id;
+  event.policyNotes = policyNotes || 'Approved by admin - follows university policy';
+
+  // Log approval action in audit log (FR25)
+  const auditId = uuidv4();
+  DB.auditLogs.set(auditId, {
+    id: auditId,
+    universityId: req.user.universityId,
+    actorId: req.user.id,
+    actionType: 'EVENT_APPROVED',
+    entityType: 'Event',
+    entityId: event.id,
+    timestamp: new Date().toISOString(),
+    details: { title: event.title, reason: policyNotes || 'Standard policy compliance check' }
+  });
 
   // Notify the event creator
   const notifId = uuidv4();
@@ -867,7 +901,7 @@ app.post('/api/events/:id/approve', authenticateToken, (req, res) => {
     userId: event.creatorId,
     type: 'EVENT_APPROVED',
     title: '✅ Event Approved',
-    message: `Your event "${event.title}" has been approved by admin`,
+    message: `Your event "${event.title}" has been approved by admin and is now published`,
     isRead: false,
     createdAt: new Date().toISOString()
   });
@@ -1161,8 +1195,20 @@ app.delete('/api/groups/:id/leave', authenticateToken, (req, res) => {
 
 // Announcements
 app.get('/api/announcements', authenticateToken, (req, res) => {
-  const announcements = Array.from(DB.announcements.values())
-    .filter(a => a.universityId === req.user.universityId)
+  // FR8: Filter announcements based on approval status and user role
+  let announcements = Array.from(DB.announcements.values())
+    .filter(a => a.universityId === req.user.universityId);
+  
+  // Admin can see pending and approved announcements
+  if (req.user.role === 'ADMIN') {
+    // Admin view includes pending announcements for approval workflow
+    // No additional filtering - show all announcements
+  } else {
+    // Regular users (STUDENT, STAFF, FACULTY) only see approved/published announcements
+    announcements = announcements.filter(a => a.isApproved === true || a.status === 'PUBLISHED');
+  }
+  
+  announcements = announcements
     .map(announcement => ({
       ...announcement,
       likeCount: announcement.likeUserIds.length,
@@ -1177,8 +1223,10 @@ app.get('/api/announcements', authenticateToken, (req, res) => {
 });
 
 app.post('/api/announcements', authenticateToken, (req, res) => {
-  if (!['STAFF', 'FACULTY', 'ADMIN'].includes(req.user.role)) {
-    return res.status(403).json({ error: 'Only staff and faculty can post announcements' });
+  // FR8: All registered users (STUDENT, STAFF, FACULTY, ADMIN) can post announcements
+  // SRS requirement: Announcements require admin approval before publishing
+  if (!req.user) {
+    return res.status(401).json({ error: 'Authentication required' });
   }
 
   const announcementId = uuidv4();
@@ -1188,6 +1236,8 @@ app.post('/api/announcements', authenticateToken, (req, res) => {
     authorId: req.user.id,
     ...req.body,
     scope: req.body.scope || 'GLOBAL',
+    status: 'PENDING',  // Changed: Requires admin approval
+    isApproved: false,  // Explicitly not approved until admin reviews
     createdAt: new Date().toISOString(),
     commentIds: [],
     likeUserIds: [],
