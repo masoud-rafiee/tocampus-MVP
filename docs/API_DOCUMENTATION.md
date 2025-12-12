@@ -1,4 +1,7 @@
-# ToCampus MVP - API Documentation
+# ToCampus API Documentation v2.0
+
+## Overview
+ToCampus API v2.0 implements the complete SRS v3.0 specification for a University Social & Event Platform.
 
 ## Base URL
 - **Development:** `http://localhost:3001/api`
@@ -10,14 +13,36 @@ All protected endpoints require a JWT token in the Authorization header:
 Authorization: Bearer <token>
 ```
 
+Tokens are valid for 7 days and use HS256 signing.
+
 ---
 
-## 1. Authentication Endpoints
+## API Endpoints Summary
+
+| Category | Endpoints |
+|----------|-----------|
+| Authentication | 4 endpoints |
+| User Profiles | 4 endpoints |
+| Social Graph | 5 endpoints |
+| Events | 6 endpoints |
+| Groups | 5 endpoints |
+| Announcements | 5 endpoints |
+| Marketplace | 6 endpoints |
+| Recommendations | 4 endpoints |
+| Chatbot | 3 endpoints |
+| Notifications | 2 endpoints |
+| Preferences | 2 endpoints |
+| Admin | 2 endpoints |
+| **Total** | **48 endpoints** |
+
+---
+
+## 1. Authentication Endpoints (FR1-FR4)
 
 ### 1.1 Register User
 **POST** `/auth/register`
 
-Creates a new user account.
+Creates a new user account with university email validation.
 
 **Request Body:**
 ```json
@@ -26,7 +51,6 @@ Creates a new user account.
   "password": "password123",
   "firstName": "John",
   "lastName": "Doe",
-  "universityId": "uuid (optional)",
   "role": "STUDENT"
 }
 ```
@@ -40,14 +64,19 @@ Creates a new user account.
     "email": "student@ubishops.ca",
     "firstName": "John",
     "lastName": "Doe",
-    "role": "STUDENT"
+    "role": "STUDENT",
+    "program": null,
+    "yearOfStudy": null,
+    "interests": [],
+    "followerCount": 0,
+    "followingCount": 0
   }
 }
 ```
 
 **Error Responses:**
-- `400 Bad Request` - User already exists
-- `500 Internal Server Error` - Server error
+- `400 Bad Request` - Invalid email format or user already exists
+- `400 Bad Request` - Password must be at least 6 characters
 
 ---
 
@@ -78,12 +107,9 @@ Authenticates a user and returns a JWT token.
 }
 ```
 
-**Error Responses:**
-- `401 Unauthorized` - Invalid credentials
-
 ---
 
-### 1.3 Forgot Password (FR2)
+### 1.3 Forgot Password
 **POST** `/auth/forgot-password`
 
 Initiates password reset process.
@@ -99,833 +125,606 @@ Initiates password reset process.
 ```json
 {
   "message": "Password reset email sent",
-  "resetToken": "uuid-token (for development only)"
+  "resetToken": "123456"
 }
 ```
 
-**Error Responses:**
-- `404 Not Found` - User not found
-
 ---
 
-### 1.4 Reset Password (FR2)
+### 1.4 Reset Password
 **POST** `/auth/reset-password`
 
-Resets user password with token.
+Completes password reset with token.
 
 **Request Body:**
 ```json
 {
-  "token": "reset-token-uuid",
+  "email": "student@ubishops.ca",
+  "token": "123456",
   "newPassword": "newpassword123"
 }
 ```
 
-**Response (200 OK):**
-```json
-{
-  "message": "Password reset successfully"
-}
-```
-
-**Error Responses:**
-- `400 Bad Request` - Invalid or expired token
-
 ---
 
-## 2. Events Endpoints
+## 2. User Profiles (FR28-FR33)
 
-### 2.1 Get All Events
-**GET** `/events`
+### 2.1 Get User Profile
+**GET** `/users/:id`
 
-Returns all published events for the user's university.
-
-**Headers:** `Authorization: Bearer <token>` (required)
-
-**Query Parameters:**
-- `status` (optional) - Filter by status: `pending` returns unapproved events (admin only)
-
-**Response (200 OK):**
-```json
-[
-  {
-    "id": "uuid",
-    "universityId": "uuid",
-    "creatorId": "uuid",
-    "title": "Welcome Fair 2025",
-    "description": "Discover clubs and resources at the annual welcome fair.",
-    "startTime": "2025-02-05T14:00:00.000Z",
-    "endTime": "2025-02-05T16:00:00.000Z",
-    "location": "Campus Quad",
-    "category": "Social",
-    "status": "PUBLISHED",
-    "isApproved": true,
-    "attendeeCount": 24,
-    "creator": {
-      "firstName": "Bob",
-      "lastName": "Staff"
-    }
-  }
-]
-```
-
----
-
-### 2.2 Get Single Event
-**GET** `/events/:id`
-
-Returns detailed information about a specific event.
-
-**Headers:** `Authorization: Bearer <token>` (required)
-
-**URL Parameters:**
-- `id` - Event UUID
+Retrieves a user's public profile. Fields returned depend on privacy settings.
 
 **Response (200 OK):**
 ```json
 {
   "id": "uuid",
-  "universityId": "uuid",
-  "creatorId": "uuid",
-  "title": "Welcome Fair 2025",
-  "description": "Discover clubs and resources...",
-  "startTime": "2025-02-05T14:00:00.000Z",
-  "endTime": "2025-02-05T16:00:00.000Z",
-  "location": "Campus Quad",
-  "category": "Social",
-  "status": "PUBLISHED",
-  "attendeeCount": 24,
-  "creator": {
-    "firstName": "Bob",
-    "lastName": "Staff"
-  },
-  "attendees": [
-    { "firstName": "John", "lastName": "Doe" },
-    { "firstName": "Jane", "lastName": "Smith" }
-  ]
+  "firstName": "John",
+  "lastName": "Doe",
+  "role": "STUDENT",
+  "bio": "Computer science student passionate about AI",
+  "program": "Computer Science",
+  "yearOfStudy": 3,
+  "interests": ["tech", "gaming", "coffee"],
+  "avatarUrl": null,
+  "followerCount": 42,
+  "followingCount": 67,
+  "isFollowing": false,
+  "createdAt": "2024-01-15T10:30:00.000Z"
 }
 ```
 
-**Error Responses:**
-- `404 Not Found` - Event not found
-
 ---
 
-### 2.3 Create Event
-**POST** `/events`
+### 2.2 Update User Profile
+**PATCH** `/users/:id`
 
-Creates a new event (Staff/Faculty/Admin only).
-
-**Headers:** `Authorization: Bearer <token>` (required)
+Updates the authenticated user's profile.
 
 **Request Body:**
 ```json
 {
-  "title": "Chess Tournament",
-  "description": "Annual campus chess championship",
-  "startTime": "2025-03-15T10:00:00.000Z",
-  "endTime": "2025-03-15T17:00:00.000Z",
-  "location": "Student Center",
-  "category": "Competition"
+  "bio": "Updated bio text",
+  "program": "Software Engineering",
+  "yearOfStudy": 4,
+  "interests": ["tech", "music", "sports"],
+  "privacySettings": {
+    "showEmail": false,
+    "showProgram": true,
+    "profileVisibility": "university"
+  }
 }
 ```
+
+**Allowed Fields:**
+- `firstName`, `lastName`, `bio`, `program`, `yearOfStudy`
+- `interests` (array of strings)
+- `classes` (array of strings)
+- `socialLinks` (object)
+- `avatarUrl`
+- `privacySettings`
+
+---
+
+## 3. Social Graph (FR34-FR36)
+
+### 3.1 Follow User
+**POST** `/users/:id/follow`
+
+Follow another user.
 
 **Response (201 Created):**
 ```json
 {
-  "id": "uuid",
-  "universityId": "uuid",
-  "creatorId": "uuid",
-  "title": "Chess Tournament",
-  "description": "Annual campus chess championship",
-  "startTime": "2025-03-15T10:00:00.000Z",
-  "endTime": "2025-03-15T17:00:00.000Z",
-  "location": "Student Center",
-  "category": "Competition",
-  "status": "DRAFT",
-  "isApproved": false,
-  "rsvpIds": [],
-  "createdAt": "2025-01-29T12:00:00.000Z"
+  "message": "Now following John Doe",
+  "followingCount": 68
 }
 ```
 
-**Error Responses:**
-- `403 Forbidden` - Only staff and faculty can create events
+---
+
+### 3.2 Unfollow User
+**DELETE** `/users/:id/follow`
+
+Unfollow a user.
+
+**Response (200 OK):**
+```json
+{
+  "message": "Unfollowed successfully",
+  "followingCount": 67
+}
+```
 
 ---
 
-### 2.4 RSVP to Event
+### 3.3 Get Followers
+**GET** `/users/:id/followers?page=1&limit=20`
+
+Get paginated list of followers.
+
+**Response:**
+```json
+{
+  "followers": [
+    {
+      "id": "uuid",
+      "firstName": "Jane",
+      "lastName": "Smith",
+      "avatarUrl": null,
+      "program": "Business",
+      "followedAt": "2024-01-10T08:00:00.000Z"
+    }
+  ],
+  "totalCount": 42,
+  "page": 1,
+  "limit": 20
+}
+```
+
+---
+
+### 3.4 Get Following
+**GET** `/users/:id/following?page=1&limit=20`
+
+Get paginated list of users being followed.
+
+---
+
+### 3.5 Get Mutual Friends
+**GET** `/users/:id/mutual-friends`
+
+Find mutual connections between authenticated user and target user.
+
+**Response:**
+```json
+{
+  "mutualFriends": [
+    {
+      "id": "uuid",
+      "firstName": "Alex",
+      "lastName": "Johnson",
+      "avatarUrl": null,
+      "program": "Psychology"
+    }
+  ],
+  "count": 5
+}
+```
+
+---
+
+## 4. Events (FR5-FR7)
+
+### 4.1 List Events
+**GET** `/events?category=Social&status=PUBLISHED`
+
+Get all events for the user's university.
+
+**Query Parameters:**
+- `category` - Filter by category (Social, Academic, Sports, etc.)
+- `status` - Filter by status (DRAFT, PUBLISHED)
+
+---
+
+### 4.2 Get Event Details
+**GET** `/events/:id`
+
+Get detailed information about a specific event.
+
+---
+
+### 4.3 Create Event
+**POST** `/events`
+
+Create a new event. Requires STAFF, FACULTY, or ADMIN role.
+
+**Request Body:**
+```json
+{
+  "title": "Tech Talk: AI in Education",
+  "description": "Join us for an insightful discussion...",
+  "startTime": "2024-03-15T14:00:00.000Z",
+  "endTime": "2024-03-15T16:00:00.000Z",
+  "location": "Science Building, Room 101",
+  "category": "Academic"
+}
+```
+
+---
+
+### 4.4 RSVP to Event
 **POST** `/events/:id/rsvp`
 
-Register attendance for an event.
+RSVP to an event.
 
-**Headers:** `Authorization: Bearer <token>` (required)
-
-**URL Parameters:**
-- `id` - Event UUID
-
-**Request Body (optional):**
+**Request Body:**
 ```json
 {
   "status": "GOING"
 }
 ```
 
-**Response (200 OK):**
-```json
-{
-  "id": "uuid",
-  "userId": "uuid",
-  "eventId": "uuid",
-  "status": "GOING",
-  "createdAt": "2025-01-29T12:00:00.000Z"
-}
-```
+---
 
-**Error Responses:**
-- `404 Not Found` - Event not found
+### 4.5 Cancel RSVP
+**DELETE** `/events/:id/rsvp`
+
+Remove RSVP from an event.
 
 ---
 
-### 2.5 Approve Event (Admin Only)
+### 4.6 Approve Event (Admin)
 **POST** `/events/:id/approve`
 
-Approve an event for publication (Admin only).
-
-**Headers:** `Authorization: Bearer <token>` (required)
-
-**URL Parameters:**
-- `id` - Event UUID
-
-**Response (200 OK):**
-```json
-{
-  "id": "uuid",
-  "title": "Chess Tournament",
-  "isApproved": true,
-  "status": "PUBLISHED",
-  "message": "Event approved successfully"
-}
-```
-
-**Error Responses:**
-- `403 Forbidden` - Only admins can approve events
-- `404 Not Found` - Event not found
+Approve a pending event. Admin only.
 
 ---
 
-### 2.6 Publish Event (Creator Only)
-**POST** `/events/:id/publish`
+## 5. Marketplace (FR37-FR40)
 
-Publish an approved event (Creator only).
+### 5.1 List Marketplace Items
+**GET** `/marketplace?category=textbooks&minPrice=10&maxPrice=100&search=calculus`
 
-**Headers:** `Authorization: Bearer <token>` (required)
+Get all active listings for the user's university.
 
-**URL Parameters:**
-- `id` - Event UUID
+**Query Parameters:**
+- `category` - textbooks, electronics, furniture, clothing, other
+- `minPrice`, `maxPrice` - Price range filter
+- `condition` - like_new, excellent, good, fair, poor
+- `search` - Search in title and description
+- `page`, `limit` - Pagination
 
-**Response (200 OK):**
+**Response:**
 ```json
 {
-  "id": "uuid",
-  "title": "Chess Tournament",
-  "status": "PUBLISHED",
-  "message": "Event published successfully"
+  "listings": [
+    {
+      "id": "uuid",
+      "title": "Calculus Textbook 8th Edition",
+      "description": "Barely used, some highlighting",
+      "price": 45.00,
+      "currency": "CAD",
+      "category": "textbooks",
+      "condition": "good",
+      "status": "active",
+      "pickupLocation": "Library",
+      "seller": {
+        "id": "uuid",
+        "firstName": "John",
+        "lastName": "D."
+      },
+      "createdAt": "2024-01-20T10:00:00.000Z"
+    }
+  ],
+  "total": 15,
+  "page": 1,
+  "limit": 20,
+  "categories": ["textbooks", "electronics", "furniture", "clothing", "other"]
 }
 ```
 
-**Error Responses:**
-- `400 Bad Request` - Event must be approved first
-- `403 Forbidden` - Only the event creator can publish
-- `404 Not Found` - Event not found
+---
+
+### 5.2 Get Listing Details
+**GET** `/marketplace/:id`
+
+Get full details of a listing including seller information.
 
 ---
 
-### 2.6 Share Event to Social Media (FR6a, FR6b)
-**POST** `/events/:id/share`
+### 5.3 Create Listing
+**POST** `/marketplace`
 
-Share an event to social media platforms.
-
-**Headers:** `Authorization: Bearer <token>` (required)
-
-**URL Parameters:**
-- `id` - Event UUID
+Create a new marketplace listing.
 
 **Request Body:**
 ```json
 {
-  "platforms": ["TWITTER", "FACEBOOK"]
+  "title": "Mini Fridge for Dorm",
+  "description": "Works perfectly, selling because moving off campus",
+  "price": 80.00,
+  "category": "furniture",
+  "condition": "excellent",
+  "pickupLocation": "Residence Hall B"
 }
-```
-
-**Response (201 Created):**
-```json
-{
-  "message": "Event shared to TWITTER, FACEBOOK",
-  "share": {
-    "id": "uuid",
-    "contentType": "EVENT",
-    "contentId": "event-uuid",
-    "userId": "user-uuid",
-    "platforms": ["TWITTER", "FACEBOOK"],
-    "sharedAt": "2025-01-29T12:00:00.000Z",
-    "status": "SHARED"
-  }
-}
-```
-
-**Valid Platforms:** `TWITTER`, `FACEBOOK`, `INSTAGRAM`, `LINKEDIN`
-
-**Error Responses:**
-- `400 Bad Request` - Invalid or missing platforms
-- `404 Not Found` - Event not found
-
----
-
-## 3. Groups Endpoints
-
-### 3.1 Get All Groups
-**GET** `/groups`
-
-Returns all groups for the user's university.
-
-**Headers:** `Authorization: Bearer <token>` (required)
-
-**Response (200 OK):**
-```json
-[
-  {
-    "id": "uuid",
-    "universityId": "uuid",
-    "name": "Chess Club",
-    "description": "For lovers of strategy and fun",
-    "category": "Recreation",
-    "memberCount": 18,
-    "createdAt": "2025-01-15T10:00:00.000Z"
-  }
-]
 ```
 
 ---
 
-### 3.2 Create Group
-**POST** `/groups`
+### 5.4 Update Listing
+**PATCH** `/marketplace/:id`
 
-Creates a new group (Staff/Faculty/Admin only).
+Update an existing listing. Owner or admin only.
 
-**Headers:** `Authorization: Bearer <token>` (required)
+---
+
+### 5.5 Delete Listing
+**DELETE** `/marketplace/:id`
+
+Remove a listing. Owner or admin only.
+
+---
+
+### 5.6 Message Seller
+**POST** `/marketplace/:id/message`
+
+Send a message to the seller about a listing.
 
 **Request Body:**
 ```json
 {
-  "name": "Photography Club",
-  "description": "Capture moments, share perspectives",
-  "category": "Arts"
+  "message": "Hi! Is this item still available?"
 }
 ```
 
-**Response (201 Created):**
+---
+
+## 6. Recommendations (FR41-FR43)
+
+### 6.1 Get Recommended Events
+**GET** `/recommendations/events?limit=10`
+
+Get personalized event recommendations based on interests, social graph, and engagement history.
+
+**Response:**
 ```json
 {
-  "id": "uuid",
-  "universityId": "uuid",
-  "name": "Photography Club",
-  "description": "Capture moments, share perspectives",
-  "category": "Arts",
-  "membershipIds": ["uuid"],
-  "createdAt": "2025-01-29T12:00:00.000Z"
+  "recommendations": [
+    {
+      "id": "uuid",
+      "title": "Tech Meetup",
+      "description": "Monthly tech community gathering",
+      "startTime": "2024-02-01T18:00:00.000Z",
+      "category": "Tech",
+      "attendeeCount": 45,
+      "recommendationScore": 85,
+      "matchReasons": ["interestMatch", "socialProof", "recency"]
+    }
+  ],
+  "count": 10
 }
 ```
 
 ---
 
-### 3.3 Join Group
-**POST** `/groups/:id/join`
+### 6.2 Get Recommended Groups
+**GET** `/recommendations/groups?limit=10`
 
-Join a group as a member.
-
-**Headers:** `Authorization: Bearer <token>` (required)
-
-**URL Parameters:**
-- `id` - Group UUID
-
-**Response (200 OK):**
-```json
-{
-  "id": "uuid",
-  "userId": "uuid",
-  "groupId": "uuid",
-  "role": "MEMBER",
-  "joinedAt": "2025-01-29T12:00:00.000Z"
-}
-```
+Get personalized group recommendations.
 
 ---
 
-### 3.4 Leave Group
-**DELETE** `/groups/:id/leave`
+### 6.3 Get Personalized Feed
+**GET** `/feed?page=1&limit=20`
 
-Leave a group.
-
-**Headers:** `Authorization: Bearer <token>` (required)
-
-**URL Parameters:**
-- `id` - Group UUID
-
-**Response (200 OK):**
-```json
-{
-  "message": "Successfully left the group"
-}
-```
-
-**Error Responses:**
-- `400 Bad Request` - Not a member of this group
-- `404 Not Found` - Group not found
+Get a mixed feed of events and announcements ranked by relevance.
 
 ---
 
-## 4. Announcements Endpoints
+### 6.4 Track Interaction
+**POST** `/interactions`
 
-### 4.1 Get All Announcements
-**GET** `/announcements`
-
-Returns all announcements for the user's university (sorted by newest first).
-
-**Headers:** `Authorization: Bearer <token>` (required)
-
-**Response (200 OK):**
-```json
-[
-  {
-    "id": "uuid",
-    "universityId": "uuid",
-    "authorId": "uuid",
-    "title": "Library Extended Hours",
-    "content": "The library will be open 24/7 during finals week.",
-    "scope": "GLOBAL",
-    "groupId": null,
-    "likeCount": 45,
-    "commentCount": 8,
-    "author": {
-      "firstName": "Bob",
-      "lastName": "Staff"
-    },
-    "createdAt": "2025-01-29T10:00:00.000Z"
-  }
-]
-```
-
----
-
-### 4.2 Post Announcement
-**POST** `/announcements`
-
-Creates a new announcement (Staff/Faculty/Admin only).
-
-**Headers:** `Authorization: Bearer <token>` (required)
+Record user interactions to improve recommendations.
 
 **Request Body:**
 ```json
 {
-  "title": "Campus Closure Notice",
-  "content": "The campus will be closed on Monday for maintenance.",
-  "scope": "GLOBAL",
-  "groupId": null
+  "contentType": "event",
+  "contentId": "uuid",
+  "interactionType": "view"
 }
 ```
 
-**Response (201 Created):**
+**Interaction Types:** view, click, rsvp, like, share, bookmark
+
+---
+
+## 7. LLM Chatbot (FR44-FR47)
+
+### 7.1 Create Conversation
+**POST** `/chatbot/conversations`
+
+Start a new chatbot conversation.
+
+**Response:**
 ```json
 {
-  "id": "uuid",
-  "universityId": "uuid",
-  "authorId": "uuid",
-  "title": "Campus Closure Notice",
-  "content": "The campus will be closed on Monday for maintenance.",
-  "scope": "GLOBAL",
-  "groupId": null,
-  "commentIds": [],
-  "likeUserIds": [],
-  "createdAt": "2025-01-29T12:00:00.000Z"
+  "conversationId": "uuid"
 }
 ```
 
 ---
 
-### 4.3 Like/Unlike Announcement
-**POST** `/announcements/:id/like`
+### 7.2 Send Message
+**POST** `/chatbot/conversations/:id/messages`
 
-Toggle like status for an announcement.
-
-**Headers:** `Authorization: Bearer <token>` (required)
-
-**URL Parameters:**
-- `id` - Announcement UUID
-
-**Response (200 OK):**
-```json
-{
-  "likeCount": 46
-}
-```
-
----
-
-### 4.4 Add Comment
-**POST** `/announcements/:id/comments`
-
-Add a comment to an announcement.
-
-**Headers:** `Authorization: Bearer <token>` (required)
-
-**URL Parameters:**
-- `id` - Announcement UUID
+Send a message and receive AI response.
 
 **Request Body:**
 ```json
 {
-  "content": "This is great news!"
+  "message": "What events are happening this week?"
 }
 ```
 
-**Response (201 Created):**
+**Response:**
 ```json
 {
-  "id": "uuid",
-  "announcementId": "uuid",
-  "authorId": "uuid",
-  "content": "This is great news!",
-  "createdAt": "2025-01-29T12:00:00.000Z"
-}
-```
-
----
-
-### 4.5 Share Announcement to Social Media (FR6a, FR6b)
-**POST** `/announcements/:id/share`
-
-Share an announcement to social media platforms.
-
-**Headers:** `Authorization: Bearer <token>` (required)
-
-**URL Parameters:**
-- `id` - Announcement UUID
-
-**Request Body:**
-```json
-{
-  "platforms": ["TWITTER", "LINKEDIN"]
-}
-```
-
-**Response (201 Created):**
-```json
-{
-  "message": "Announcement shared to TWITTER, LINKEDIN",
-  "share": {
+  "userMessage": {
     "id": "uuid",
-    "contentType": "ANNOUNCEMENT",
-    "contentId": "announcement-uuid",
-    "userId": "user-uuid",
-    "platforms": ["TWITTER", "LINKEDIN"],
-    "sharedAt": "2025-01-29T12:00:00.000Z",
-    "status": "SHARED"
+    "content": "What events are happening this week?"
+  },
+  "botResponse": {
+    "id": "uuid",
+    "content": "Here are some upcoming events...",
+    "suggestions": ["Tell me more about the first event", "Show sports events"],
+    "relatedContent": [
+      {"type": "event", "id": "uuid", "title": "Welcome Fair"}
+    ]
   }
 }
 ```
 
-**Valid Platforms:** `TWITTER`, `FACEBOOK`, `INSTAGRAM`, `LINKEDIN`
+---
+
+### 7.3 Get Conversation History
+**GET** `/chatbot/conversations/:id/messages`
+
+Retrieve all messages in a conversation.
 
 ---
 
-## 5. Social Media Endpoints
+## 8. Notifications
 
-### 5.1 Get User's Social Shares
-**GET** `/social/shares`
-
-Returns all social media shares made by the authenticated user.
-
-**Headers:** `Authorization: Bearer <token>` (required)
-
-**Response (200 OK):**
-```json
-[
-  {
-    "id": "uuid",
-    "contentType": "EVENT",
-    "contentId": "event-uuid",
-    "userId": "user-uuid",
-    "platforms": ["TWITTER", "FACEBOOK"],
-    "sharedAt": "2025-01-29T12:00:00.000Z",
-    "status": "SHARED"
-  }
-]
-```
-
----
-
-## 6. Notifications Endpoints
-
-### 5.1 Get User Notifications
+### 8.1 Get Notifications
 **GET** `/notifications`
 
-Returns all notifications for the authenticated user.
-
-**Headers:** `Authorization: Bearer <token>` (required)
-
-**Response (200 OK):**
-```json
-[
-  {
-    "id": "uuid",
-    "userId": "uuid",
-    "type": "EVENT_REMINDER",
-    "title": "Event Tomorrow",
-    "message": "Welcome Fair 2025 starts in 24 hours",
-    "isRead": false,
-    "createdAt": "2025-01-28T12:00:00.000Z"
-  }
-]
-```
+Get all notifications for the authenticated user.
 
 ---
 
-### 6.2 Mark Notification as Read
+### 8.2 Mark as Read
 **PATCH** `/notifications/:id/read`
 
 Mark a notification as read.
 
-**Headers:** `Authorization: Bearer <token>` (required)
+---
 
-**URL Parameters:**
-- `id` - Notification UUID
+## 9. User Preferences (FR32-FR33)
 
-**Response (200 OK):**
+### 9.1 Get Preferences
+**GET** `/preferences`
+
+Get user's notification and feed preferences.
+
+**Response:**
 ```json
 {
-  "id": "uuid",
   "userId": "uuid",
-  "type": "EVENT_REMINDER",
-  "title": "Event Tomorrow",
-  "message": "Welcome Fair 2025 starts in 24 hours",
-  "isRead": true,
-  "createdAt": "2025-01-28T12:00:00.000Z"
+  "notifications": {
+    "eventReminders": true,
+    "newAnnouncements": true,
+    "groupUpdates": true,
+    "newFollowers": true,
+    "marketplaceMessages": true,
+    "recommendationDigest": "weekly"
+  },
+  "feed": {
+    "showRecommended": true,
+    "prioritizeFollowing": true
+  }
 }
 ```
 
 ---
 
-## 7. Search Endpoints
+### 9.2 Update Preferences
+**PATCH** `/preferences`
 
-### 7.1 Global Search
-**GET** `/search`
+Update user preferences.
+
+---
+
+## 10. Admin Endpoints (FR24-FR27)
+
+### 10.1 Get Analytics
+**GET** `/admin/analytics`
+
+Get platform analytics. Admin only.
+
+**Response:**
+```json
+{
+  "users": {
+    "total": 150,
+    "newThisWeek": 12,
+    "newThisMonth": 45,
+    "byRole": {
+      "students": 140,
+      "staff": 8,
+      "admins": 2
+    }
+  },
+  "events": {
+    "total": 25,
+    "active": 8,
+    "pending": 2,
+    "totalRSVPs": 320
+  },
+  "groups": {
+    "total": 15,
+    "totalMemberships": 450
+  },
+  "marketplace": {
+    "totalListings": 30,
+    "activeListings": 22
+  },
+  "engagement": {
+    "weeklyInteractions": 1250,
+    "avgInteractionsPerUser": "8.33"
+  }
+}
+```
+
+---
+
+### 10.2 Get Audit Logs
+**GET** `/admin/audit-logs?action=create&resourceType=event&page=1`
+
+Get system audit logs. Admin only.
+
+---
+
+## 11. Search
+
+### 11.1 Global Search
+**GET** `/search?q=welcome&type=all`
 
 Search across events, groups, and announcements.
 
-**Headers:** `Authorization: Bearer <token>` (required)
-
 **Query Parameters:**
-- `q` (required) - Search query (minimum 2 characters)
-- `type` (optional) - Filter by type: `events`, `groups`, `announcements`, or `all` (default)
-
-**Example:** `/api/search?q=chess&type=all`
-
-**Response (200 OK):**
-```json
-{
-  "events": [
-    {
-      "id": "uuid",
-      "title": "Chess Tournament",
-      "description": "Annual campus chess championship...",
-      "category": "Competition",
-      "startTime": "2025-03-15T10:00:00.000Z",
-      "type": "event"
-    }
-  ],
-  "groups": [
-    {
-      "id": "uuid",
-      "name": "Chess Club",
-      "description": "Weekly meetings for chess enthusiasts...",
-      "category": "Recreation",
-      "memberCount": 47,
-      "type": "group"
-    }
-  ],
-  "announcements": [
-    {
-      "id": "uuid",
-      "title": "Chess Club Meeting Cancelled",
-      "content": "Due to weather conditions...",
-      "createdAt": "2025-01-29T12:00:00.000Z",
-      "type": "announcement"
-    }
-  ]
-}
-```
-
-**Error Responses:**
-- `400 Bad Request` - Search query must be at least 2 characters
+- `q` - Search query (min 2 characters)
+- `type` - events, groups, announcements, or all
 
 ---
 
-## 8. Comments Endpoints
+## Error Responses
 
-### 8.1 Get Comments for Announcement
-**GET** `/announcements/:id/comments`
-
-Returns all comments for an announcement.
-
-**Headers:** `Authorization: Bearer <token>` (required)
-
-**URL Parameters:**
-- `id` - Announcement UUID
-
-**Response (200 OK):**
-```json
-[
-  {
-    "id": "uuid",
-    "announcementId": "uuid",
-    "authorId": "uuid",
-    "content": "Great announcement!",
-    "createdAt": "2025-01-29T12:00:00.000Z",
-    "author": {
-      "id": "uuid",
-      "firstName": "John",
-      "lastName": "Doe",
-      "role": "STUDENT"
-    }
-  }
-]
-```
-
-**Error Responses:**
-- `404 Not Found` - Announcement not found
-
----
-
-### 8.2 Add Comment to Announcement
-**POST** `/announcements/:id/comments`
-
-Add a new comment to an announcement.
-
-**Headers:** `Authorization: Bearer <token>` (required)
-
-**URL Parameters:**
-- `id` - Announcement UUID
-
-**Request Body:**
-```json
-{
-  "content": "Great announcement!"
-}
-```
-
-**Response (201 Created):**
-```json
-{
-  "id": "uuid",
-  "announcementId": "uuid",
-  "authorId": "uuid",
-  "content": "Great announcement!",
-  "createdAt": "2025-01-29T12:00:00.000Z",
-  "author": {
-    "id": "uuid",
-    "firstName": "John",
-    "lastName": "Doe",
-    "role": "STUDENT"
-  }
-}
-```
-
-**Error Responses:**
-- `404 Not Found` - Announcement not found
-
----
-
-## 9. Health Check
-
-### 9.1 Health Check
-**GET** `/health`
-
-Returns server health status.
-
-**Response (200 OK):**
-```json
-{
-  "status": "ok",
-  "timestamp": "2025-01-29T12:00:00.000Z"
-}
-```
-
----
-
-## Error Response Format
-
-All error responses follow this format:
+All endpoints return consistent error format:
 
 ```json
 {
-  "error": "Error message describing the issue"
+  "error": "Error message description"
 }
 ```
 
 **Common HTTP Status Codes:**
-| Code | Meaning |
-|------|---------|
-| 200 | Success |
-| 201 | Created |
-| 400 | Bad Request |
-| 401 | Unauthorized (missing/invalid token) |
-| 403 | Forbidden (insufficient permissions) |
-| 404 | Not Found |
-| 500 | Internal Server Error |
+- `200 OK` - Success
+- `201 Created` - Resource created
+- `400 Bad Request` - Invalid input
+- `401 Unauthorized` - Missing or invalid token
+- `403 Forbidden` - Insufficient permissions
+- `404 Not Found` - Resource not found
+- `500 Internal Server Error` - Server error
 
 ---
 
-## Enums
+## Rate Limiting
 
-### User Roles
-- `STUDENT` - Regular student
-- `STAFF` - University staff
-- `FACULTY` - Faculty member
-- `ADMIN` - Administrator
-
-### Event Status
-- `DRAFT` - Created, awaiting approval
-- `PUBLISHED` - Approved and visible
-- `CANCELLED` - Event cancelled
-
-### Announcement Scope
-- `GLOBAL` - Visible to all university users
-- `GROUP` - Visible only to group members
-
-### Notification Types
-- `EVENT_REMINDER` - Upcoming event alert
-- `NEW_ANNOUNCEMENT` - New announcement posted
-- `ANNOUNCEMENT` - Global announcement notification
-- `GROUP_ANNOUNCEMENT` - Group-specific announcement
-- `RSVP_CONFIRMATION` - RSVP confirmed
-- `EVENT_APPROVED` - Event approved by admin
-- `GROUP_JOIN` - New member joined group
-- `GROUP_LEAVE` - Member left group
+Currently no rate limiting in development. Production should implement:
+- 100 requests/minute for authenticated users
+- 20 requests/minute for unauthenticated endpoints
 
 ---
 
-## Test Accounts
+## Versioning
 
-| Role | Email | Password |
-|------|-------|----------|
-| Admin | admin@ubishops.ca | password123 |
-| Staff | staff@ubishops.ca | password123 |
-| Student | student@ubishops.ca | password123 |
+API version is included in the root endpoint response:
 
----
-
-## Rate Limits
-Currently no rate limiting in MVP. Production will implement:
-- 100 requests per minute per IP
-- 1000 requests per hour per authenticated user
+```json
+{
+  "name": "ToCampus API",
+  "version": "2.0.0",
+  "srsVersion": "v3.0 (CS-410 Final)"
+}
+```

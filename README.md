@@ -1,28 +1,82 @@
-# ToCampus MVP - University Social & Event Platform
+# ToCampus MVP v2.0 - University Social & Event Platform
+
+<div align="center">
+
+![ToCampus Logo](https://img.shields.io/badge/ToCampus-v2.0-purple?style=for-the-badge&logo=graduation-cap)
+![Node.js](https://img.shields.io/badge/Node.js-18+-green?style=flat-square&logo=node.js)
+![React](https://img.shields.io/badge/React-18-blue?style=flat-square&logo=react)
+![Tests](https://img.shields.io/badge/Tests-45%20Passing-success?style=flat-square)
+![SRS](https://img.shields.io/badge/SRS-v3.0-orange?style=flat-square)
+
+**Your Campus. Connected.**
+
+</div>
+
+---
 
 ## 🎓 Project Overview
 
 ToCampus is a comprehensive university social and event management platform designed to unify campus communications. Built as a Phase 1 MVP for Bishop's University with multi-tenant architecture for global scalability.
 
-### **Key Features**
-- ✅ Secure user management (Students, Faculty, Staff, Admin)
-- ✅ Event creation, approval workflow, and RSVP tracking
-- ✅ Campus-wide and group-scoped announcements
-- ✅ Interest groups and club management
-- ✅ Real-time notifications
-- ✅ Social media integration (Instagram, Facebook, LinkedIn)
-- ✅ Multi-tenant SaaS architecture
-- ✅ Mobile-first responsive design
+**Implements:** SRS v3.0 (CS-410 Final Project)
+
+### ✨ Key Features
+
+| Module | Features | SRS Sections |
+|--------|----------|--------------|
+| **Authentication** | Secure login, university email validation, password reset | FR1-FR4 |
+| **Events** | Creation, RSVP, approval workflow, calendar integration | FR5-FR7 |
+| **Announcements** | Campus-wide posts, comments, likes, sharing | FR8-FR10 |
+| **Groups & Clubs** | Membership, group announcements, interest-based | FR12-FR15 |
+| **Marketplace** | Buy/sell textbooks, electronics, furniture | FR37-FR40 |
+| **Social Graph** | Follow/unfollow, followers, mutual friends | FR34-FR36 |
+| **Rich Profiles** | Bio, program, interests, privacy settings | FR28-FR33 |
+| **Recommendations** | AI-powered event/group suggestions | FR41-FR43 |
+| **LLM Chatbot** | Campus assistant with natural language | FR44-FR47 |
+| **Admin Dashboard** | Analytics, audit logs, moderation | FR24-FR27 |
+| **Notifications** | Real-time alerts, preferences | FR20-FR23 |
+
+---
 
 ## 🏗️ Architecture
 
 **Pattern:** Modular Monolith (Phase 1) → Microservices (Phase 2)
 
-**Tech Stack:**
-- **Frontend:** React 18, Tailwind CSS, Lucide Icons
-- **Backend:** Node.js, Express, JWT Authentication
-- **Database:** PostgreSQL with Prisma ORM (production) / In-memory (prototype)
-- **Deployment:** Vercel (frontend) + Railway (backend)
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      ToCampus Platform                       │
+├─────────────────────────────────────────────────────────────┤
+│  Frontend (React 18 + Tailwind CSS)                          │
+│  ├── Authentication Flow (Splash, Login, Register)          │
+│  ├── Feed with Recommendations                               │
+│  ├── Events & Groups Management                              │
+│  ├── Marketplace (Buy/Sell)                                  │
+│  ├── Campus Assistant (Chatbot)                              │
+│  └── User Profiles with Social Graph                        │
+├─────────────────────────────────────────────────────────────┤
+│  Backend API (Express.js + JWT)                              │
+│  ├── 48 RESTful Endpoints                                   │
+│  ├── Recommendation Engine                                   │
+│  ├── Chatbot Service                                        │
+│  └── Audit Logging                                          │
+├─────────────────────────────────────────────────────────────┤
+│  Data Layer (In-Memory → PostgreSQL)                        │
+│  └── 20+ Entity Types (User, Event, Listing, etc.)         │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| Frontend | React 18, Tailwind CSS, Lucide Icons |
+| Backend | Node.js 18+, Express.js, JWT (7-day) |
+| Database | In-memory Maps (→ PostgreSQL/Prisma) |
+| Testing | Jest, Supertest, React Testing Library |
+| CI/CD | GitHub Actions (3-stage pipeline) |
+| Deployment | Vercel (frontend) + Railway (backend) |
+
+---
 
 ## 🚀 Quick Start
 
@@ -31,226 +85,268 @@ ToCampus is a comprehensive university social and event management platform desi
 - Git
 
 ### Installation
+
 ```bash
 # Clone repository
-git clone <repository-url>
-cd tocampus-mvp
+git clone https://github.com/masoud-rafiee/tocampus-MVP.git
+cd tocampus-MVP
 
-# Install backend dependencies
-cd backend
-npm install
+# Install all dependencies
+npm run install:all
 
-# Install frontend dependencies
-cd ../frontend
-npm install
+# Or install individually:
+# Backend
+cd backend && npm install
+
+# Frontend
+cd ../frontend && npm install
 ```
 
 ### Running the Application
+
 ```bash
-# Terminal 1: Start backend server
-cd backend
+# From root directory - start both servers
 npm start
-# Server runs on http://localhost:3001
 
-# Terminal 2: Start frontend
-cd frontend
-npm start
-# App opens on http://localhost:3000
+# Or run individually:
+# Terminal 1: Backend (http://localhost:3001)
+cd backend && npm start
+
+# Terminal 2: Frontend (http://localhost:3000)
+cd frontend && npm start
 ```
 
-### Default Test Accounts
+### Running Tests
 
-| Role | Email | Password |
-|------|-------|----------|
-| Student | student@ubishops.ca | password123 |
-| Staff | staff@ubishops.ca | password123 |
-| Admin | admin@ubishops.ca | password123 |
-
-## 📱 Features Demonstration
-
-### 1. User Authentication
-- Register with institutional email
-- Secure JWT-based login
-- Role-based access control (RBAC)
-
-### 2. Event Management
-- **Creation:** Staff/Faculty create events with details
-- **Approval:** Admin approves before publication
-- **RSVP:** Students register attendance
-- **Social Sharing:** Optional cross-posting to social media
-
-### 3. Announcements
-- Post campus-wide or group-specific updates
-- Comment and like functionality
-- Real-time notification delivery
-
-### 4. Groups & Clubs
-- Create interest groups
-- Membership management
-- Group-scoped content
-
-### 5. Notifications
-- Event reminders
-- Approval notifications
-- New announcement alerts
-- RSVP confirmations
-
-## 📊 API Endpoints
-
-### Authentication
-```
-POST /api/auth/register - Register new user
-POST /api/auth/login - User login
-```
-
-### Events
-```
-GET /api/events - List all events
-POST /api/events - Create event (Staff/Faculty)
-POST /api/events/:id/rsvp - RSVP to event
-POST /api/events/:id/approve - Approve event (Admin)
-```
-
-### Groups
-```
-GET /api/groups - List all groups
-POST /api/groups - Create group (Staff/Faculty)
-POST /api/groups/:id/join - Join group
-```
-
-### Announcements
-```
-GET /api/announcements - List announcements
-POST /api/announcements - Post announcement (Staff/Faculty)
-POST /api/announcements/:id/like - Like/unlike
-POST /api/announcements/:id/comments - Add comment
-```
-
-### Notifications
-```
-GET /api/notifications - Get user notifications
-PATCH /api/notifications/:id/read - Mark as read
-```
-
-## 🎨 Design System
-
-**Color Palette:**
-- Primary: Purple (#8B5CF6)
-- Secondary: Gray (#6B7280)
-- Accent 1: Yellow (#FBBF24)
-- Accent 2: Blue (#3B82F6)
-- Accent 3: Orange (#F97316)
-
-**UI/UX Principles:**
-- Mobile-first responsive design
-- Instagram-inspired feed interface
-- Bottom navigation for thumb-friendly mobile use
-- Gradient overlays and modern card designs
-- Accessibility compliant (WCAG 2.1)
-
-## 🔒 Security Features
-
-- Password hashing with bcrypt (10 rounds)
-- JWT tokens with 7-day expiration
-- Role-based authorization guards
-- HTTPS/TLS 1.3 for all communications
-- Input validation and sanitization
-- CORS protection
-
-## 📈 Non-Functional Requirements Met
-
-| Requirement | Target | Status |
-|-------------|--------|--------|
-| Response Time | < 2s | ✅ Achieved |
-| Concurrent Users | 500+ | ✅ Supported |
-| Uptime | 99.5% | ✅ Cloud hosting |
-| Security | HTTPS, JWT, RBAC | ✅ Implemented |
-| Scalability | Horizontal | ✅ Stateless design |
-| Multi-tenancy | 5+ universities | ✅ Architecture ready |
-
-## 🧪 Testing
 ```bash
-# Run backend tests
-cd backend
+# Run all tests (45 total)
 npm test
 
-# Run frontend tests
-cd frontend
-npm test
+# Backend tests only (36 tests)
+cd backend && npm test
+
+# Frontend tests only (9 tests)
+cd frontend && npm test
 ```
-
-## 📦 Deployment
-
-### Backend (Railway)
-```bash
-# Railway CLI
-railway login
-railway init
-railway up
-```
-
-### Frontend (Vercel)
-```bash
-# Vercel CLI
-vercel login
-vercel --prod
-```
-
-## 📚 Documentation
-
-- [Module Descriptions](MODULES_DESCRIPTION.md)
-- [API Documentation](docs/API_DOCUMENTATION.md)
-- [Architecture Guide](docs/ARCHITECTURE.md)
-- [Deployment Guide](docs/DEPLOYMENT_GUIDE.md)
-- [User Guide](docs/USER_GUIDE.md)
-
-## 🔄 Development Roadmap
-
-### Phase 1 (Current - MVP)
-- ✅ Core modules implementation
-- ✅ Authentication and authorization
-- ✅ Event and announcement management
-- ✅ Groups and notifications
-- ✅ Mobile-first UI
-
-### Phase 2 (Future)
-- Real-time WebSocket chat
-- Advanced analytics dashboard
-- AI-driven content recommendations
-- SMS/Push notifications
-- Microservices architecture migration
-
-## 👨‍💻 Development
-
-### Code Structure
-- **Modular monolith** with clear separation of concerns
-- **Layered architecture:** Presentation → Application → Business → Data
-- **Service-oriented** design for easy microservices extraction
-- **Repository pattern** for data abstraction
-
-### Conventions
-- ES6+ JavaScript with async/await
-- React functional components with hooks
-- RESTful API design
-- Conventional commits for version control
-
-## 🤝 Contributing
-
-This is an academic project for CS-410 Software Engineering, leading to become a Product to be worked on more broadly soon; For questions or suggestions, please contact the development team.
-
-## 📄 License
-
-Academic project - Bishop's University © 2025
-
-## 👤 Author
-
-**Masoud Rafiee**
-- Project: University Social & Event Platform
-- Course: CS-410 Software Engineering
-- Institution: Bishop's University
-- Date: Novemeber 2025
 
 ---
 
-**Built with ❤️ for campus communities worldwide**
+## 👤 Test Accounts
+
+| Role | Email | Password | Capabilities |
+|------|-------|----------|--------------|
+| **Student** | student@ubishops.ca | password123 | View content, RSVP, join groups, marketplace |
+| **Staff** | staff@ubishops.ca | password123 | + Create events, post announcements |
+| **Admin** | admin@ubishops.ca | password123 | + Admin dashboard, approve events, analytics |
+
+---
+
+## 📱 Features Walkthrough
+
+### 1. Feed & Recommendations (FR41-43)
+- Personalized content based on interests and social graph
+- Recommendation scores shown for each item
+- Swipe through suggested events
+
+### 2. Marketplace (FR37-40)
+- Browse categories: Textbooks, Electronics, Furniture, Clothing
+- Filter by price, condition, search terms
+- Message sellers directly
+- Create listings with photos and details
+
+### 3. Campus Assistant (FR44-47)
+- Natural language queries: "What events are happening?"
+- Contextual suggestions
+- Links to relevant content (events, groups, listings)
+
+### 4. Social Graph (FR34-36)
+- Follow other students
+- View followers/following lists
+- Discover mutual friends
+- Profile privacy controls
+
+### 5. Rich Profiles (FR28-33)
+- Program and year of study
+- Interests selection
+- Social links (LinkedIn, Instagram, etc.)
+- Privacy settings (visibility controls)
+
+### 6. Admin Dashboard (FR24-27)
+- Real-time analytics (users, events, engagement)
+- Audit log viewer
+- Event approval queue
+- User management
+
+---
+
+## 📊 API Overview
+
+**Base URL:** `http://localhost:3001/api`
+
+| Category | Endpoints | Example |
+|----------|-----------|---------|
+| Auth | 4 | `POST /auth/login` |
+| Users | 9 | `GET /users/:id/followers` |
+| Events | 6 | `POST /events/:id/rsvp` |
+| Marketplace | 6 | `GET /marketplace?category=textbooks` |
+| Recommendations | 4 | `GET /recommendations/events` |
+| Chatbot | 3 | `POST /chatbot/conversations/:id/messages` |
+| Admin | 2 | `GET /admin/analytics` |
+
+📚 **Full documentation:** [docs/API_DOCUMENTATION.md](docs/API_DOCUMENTATION.md)
+
+---
+
+## 🧪 Test Coverage
+
+```
+Tests: 45 passing (36 backend + 9 frontend)
+
+Backend Tests:
+  ✓ Authentication (6 tests)
+  ✓ Events (3 tests)
+  ✓ Groups (1 test)
+  ✓ Announcements (1 test)
+  ✓ User Profiles (2 tests)
+  ✓ Social Graph (3 tests)
+  ✓ Marketplace (4 tests)
+  ✓ Recommendations (4 tests)
+  ✓ Chatbot (3 tests)
+  ✓ Admin Analytics (3 tests)
+
+Frontend Tests:
+  ✓ Splash Screen (2 tests)
+  ✓ Login Screen (3 tests)
+  ✓ UI Components (2 tests)
+  ✓ Utilities (2 tests)
+```
+
+---
+
+## 🔧 Configuration
+
+### Environment Variables
+
+```bash
+# Backend (.env)
+PORT=3001
+JWT_SECRET=your-secret-key-change-in-production
+NODE_ENV=development
+
+# Frontend (.env)
+REACT_APP_API_URL=http://localhost:3001/api
+```
+
+---
+
+## 📁 Project Structure
+
+```
+tocampus-MVP/
+├── backend/
+│   ├── server.js           # Main API server (~2000 lines)
+│   ├── __tests__/          # Jest test suite
+│   └── package.json
+├── frontend/
+│   ├── src/
+│   │   ├── App.jsx         # Main React app (~3700 lines)
+│   │   ├── App.test.js     # Frontend tests
+│   │   └── index.js
+│   └── package.json
+├── docs/
+│   ├── API_DOCUMENTATION.md
+│   ├── ARCHITECTURE.md
+│   ├── USER_GUIDE.md
+│   └── DEPLOYMENT_GUIDE.md
+├── .github/
+│   └── workflows/
+│       └── ci-cd.yml       # GitHub Actions pipeline
+└── package.json
+```
+
+---
+
+## 🚢 Deployment
+
+### CI/CD Pipeline
+
+The project uses GitHub Actions with 3 stages:
+
+1. **Backend Tests** - Run Jest tests
+2. **Frontend Tests** - Run React tests
+3. **Deploy** - Deploy to Vercel/Railway
+
+```yaml
+# Trigger on push to main
+on:
+  push:
+    branches: [main]
+```
+
+### Manual Deployment
+
+```bash
+# Backend to Railway
+railway login
+railway up
+
+# Frontend to Vercel
+vercel --prod
+```
+
+---
+
+## 📈 Roadmap
+
+### Phase 1 (Current) ✅
+- [x] Authentication & Authorization
+- [x] Events & RSVP
+- [x] Announcements & Comments
+- [x] Groups & Membership
+- [x] Marketplace
+- [x] Social Graph
+- [x] Recommendations
+- [x] Chatbot
+- [x] Admin Dashboard
+
+### Phase 2 (Planned)
+- [ ] Real-time messaging (WebSocket)
+- [ ] Push notifications (FCM)
+- [ ] Image upload (S3/Cloudinary)
+- [ ] PostgreSQL migration
+- [ ] Mobile app (React Native)
+- [ ] External LLM integration (OpenAI)
+
+---
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit changes (`git commit -m 'Add amazing feature'`)
+4. Push to branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+---
+
+## 📄 License
+
+This project is part of CS-410 Software Engineering course at Bishop's University.
+
+---
+
+## 👥 Team
+
+**ToCampus Development Team**
+- Software Engineering Project
+
+---
+
+<div align="center">
+
+**Built with ❤️ for the university community**
+
+[Report Bug](https://github.com/masoud-rafiee/tocampus-MVP/issues) · [Request Feature](https://github.com/masoud-rafiee/tocampus-MVP/issues)
+
+</div>
 

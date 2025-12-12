@@ -8,7 +8,9 @@ import {
   Linkedin, ChevronDown, Tag, Bookmark, BookmarkCheck, Edit, Trash2,
   Shield, BarChart3, UserPlus, CheckSquare, XCircle, Globe, Hash,
   Zap, Star, TrendingUp, Award, Target, Coffee, Music, Palette,
-  Camera, Code, Dumbbell, BookOpen, Mic, Gamepad2, Film, Plane
+  Camera, Code, Dumbbell, BookOpen, Mic, Gamepad2, Film, Plane,
+  ShoppingBag, DollarSign, Package, MessageCircle as ChatIcon, Bot, Compass,
+  UserMinus, UserCheck as Following, Users as Followers
 } from 'lucide-react';
 
 // API Configuration
@@ -41,6 +43,25 @@ const INTEREST_TAGS = [
   { id: 'coffee', label: 'Coffee & Social', icon: Coffee },
   { id: 'fitness', label: 'Fitness', icon: Dumbbell }
 ];
+
+// Marketplace categories (FR37-40)
+const MARKETPLACE_CATEGORIES = [
+  { id: 'all', label: 'All Items', icon: Grid },
+  { id: 'textbooks', label: 'Textbooks', icon: BookOpen },
+  { id: 'electronics', label: 'Electronics', icon: Zap },
+  { id: 'furniture', label: 'Furniture', icon: Package },
+  { id: 'clothing', label: 'Clothing', icon: ShoppingBag },
+  { id: 'other', label: 'Other', icon: Tag }
+];
+
+// Condition labels for marketplace
+const CONDITION_LABELS = {
+  'like_new': 'Like New',
+  'excellent': 'Excellent',
+  'good': 'Good',
+  'fair': 'Fair',
+  'poor': 'Poor'
+};
 
 // Social platforms for sharing
 const SOCIAL_PLATFORMS = [
@@ -1074,6 +1095,767 @@ const OnboardingFlow = ({ onComplete }) => {
   );
 };
 
+// ============================================
+// SRS v3.0 NEW COMPONENTS
+// ============================================
+
+// Marketplace Component (FR37-40)
+const MarketplaceView = ({ authToken, currentUser }) => {
+  const [listings, setListings] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showCreateListing, setShowCreateListing] = useState(false);
+  const [selectedListing, setSelectedListing] = useState(null);
+  const [showMessageModal, setShowMessageModal] = useState(false);
+
+  useEffect(() => {
+    fetchListings();
+  }, [selectedCategory, authToken]);
+
+  const fetchListings = async () => {
+    try {
+      setIsLoading(true);
+      const params = new URLSearchParams();
+      if (selectedCategory !== 'all') params.append('category', selectedCategory);
+      if (searchQuery) params.append('search', searchQuery);
+      
+      const response = await fetch(`${API_BASE_URL}/marketplace?${params}`, {
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setListings(data.listings || []);
+      }
+    } catch (error) {
+      console.error('Error fetching listings:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    fetchListings();
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-white text-xl font-bold flex items-center">
+          <ShoppingBag size={24} className="mr-2 text-green-400" />
+          Marketplace
+        </h2>
+        <button
+          onClick={() => setShowCreateListing(true)}
+          className="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-xl flex items-center text-sm font-semibold transition"
+        >
+          <Plus size={18} className="mr-1" />
+          Sell Item
+        </button>
+      </div>
+
+      {/* Search */}
+      <form onSubmit={handleSearch} className="flex gap-2">
+        <div className="flex-1 relative">
+          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search listings..."
+            className="w-full bg-gray-800 text-white pl-10 pr-4 py-3 rounded-xl border border-gray-700 focus:border-green-500 focus:outline-none"
+          />
+        </div>
+        <button type="submit" className="bg-gray-700 hover:bg-gray-600 px-4 rounded-xl transition">
+          <Search size={20} className="text-white" />
+        </button>
+      </form>
+
+      {/* Categories */}
+      <div className="flex gap-2 overflow-x-auto pb-2">
+        {MARKETPLACE_CATEGORIES.map(cat => {
+          const Icon = cat.icon;
+          return (
+            <button
+              key={cat.id}
+              onClick={() => setSelectedCategory(cat.id)}
+              className={`flex items-center px-4 py-2 rounded-xl whitespace-nowrap transition ${
+                selectedCategory === cat.id
+                  ? 'bg-green-600 text-white'
+                  : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+              }`}
+            >
+              <Icon size={16} className="mr-2" />
+              {cat.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Listings Grid */}
+      {isLoading ? (
+        <div className="text-center py-8">
+          <RefreshCw className="animate-spin mx-auto text-gray-400" size={32} />
+        </div>
+      ) : listings.length === 0 ? (
+        <div className="text-center py-8 text-gray-400">
+          <Package size={48} className="mx-auto mb-3 opacity-50" />
+          <p>No listings found</p>
+          <p className="text-sm">Be the first to list an item!</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          {listings.map(listing => (
+            <div
+              key={listing.id}
+              onClick={() => setSelectedListing(listing)}
+              className="bg-gray-800 rounded-xl overflow-hidden cursor-pointer hover:ring-2 hover:ring-green-500 transition"
+            >
+              <div className="h-32 bg-gradient-to-br from-gray-700 to-gray-600 flex items-center justify-center">
+                <Package size={40} className="text-gray-500" />
+              </div>
+              <div className="p-3">
+                <h4 className="text-white font-semibold text-sm truncate">{listing.title}</h4>
+                <p className="text-green-400 font-bold text-lg">${listing.price}</p>
+                <div className="flex items-center justify-between mt-2">
+                  <span className="text-xs text-gray-400 bg-gray-700 px-2 py-1 rounded">
+                    {CONDITION_LABELS[listing.condition] || listing.condition}
+                  </span>
+                  <span className="text-xs text-gray-500">{listing.seller?.firstName}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Listing Detail Modal */}
+      {selectedListing && (
+        <Modal
+          isOpen={!!selectedListing}
+          onClose={() => setSelectedListing(null)}
+          title="Listing Details"
+          size="md"
+        >
+          <div className="p-4">
+            <div className="h-48 bg-gradient-to-br from-gray-700 to-gray-600 rounded-xl flex items-center justify-center mb-4">
+              <Package size={60} className="text-gray-500" />
+            </div>
+            <h3 className="text-white font-bold text-xl mb-2">{selectedListing.title}</h3>
+            <p className="text-green-400 font-bold text-2xl mb-3">${selectedListing.price} CAD</p>
+            <p className="text-gray-400 text-sm mb-4">{selectedListing.description}</p>
+            
+            <div className="space-y-2 mb-4">
+              <div className="flex items-center text-gray-400 text-sm">
+                <Tag size={16} className="mr-2" />
+                Condition: {CONDITION_LABELS[selectedListing.condition]}
+              </div>
+              <div className="flex items-center text-gray-400 text-sm">
+                <MapPin size={16} className="mr-2" />
+                Pickup: {selectedListing.pickupLocation || 'Contact seller'}
+              </div>
+            </div>
+
+            {/* Seller Info */}
+            <div className="bg-gray-700/50 rounded-xl p-3 mb-4">
+              <p className="text-gray-400 text-xs mb-1">Seller</p>
+              <div className="flex items-center">
+                <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white font-bold mr-3">
+                  {selectedListing.seller?.firstName?.[0]}
+                </div>
+                <div>
+                  <p className="text-white font-medium">
+                    {selectedListing.seller?.firstName} {selectedListing.seller?.lastName}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {selectedListing.sellerId !== currentUser?.id && (
+              <button
+                onClick={() => setShowMessageModal(true)}
+                className="w-full bg-green-600 hover:bg-green-500 text-white py-3 rounded-xl font-semibold transition flex items-center justify-center"
+              >
+                <MessageCircle size={20} className="mr-2" />
+                Message Seller
+              </button>
+            )}
+          </div>
+        </Modal>
+      )}
+
+      {/* Create Listing Modal */}
+      <CreateListingModal
+        isOpen={showCreateListing}
+        onClose={() => setShowCreateListing(false)}
+        authToken={authToken}
+        onSuccess={() => {
+          setShowCreateListing(false);
+          fetchListings();
+        }}
+      />
+    </div>
+  );
+};
+
+// Create Listing Modal
+const CreateListingModal = ({ isOpen, onClose, authToken, onSuccess }) => {
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    price: '',
+    category: 'textbooks',
+    condition: 'good',
+    pickupLocation: ''
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    
+    if (!formData.title || !formData.price || !formData.category) {
+      setError('Please fill in required fields');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/marketplace`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formData)
+      });
+
+      if (response.ok) {
+        onSuccess();
+        setFormData({ title: '', description: '', price: '', category: 'textbooks', condition: 'good', pickupLocation: '' });
+      } else {
+        const data = await response.json();
+        setError(data.error || 'Failed to create listing');
+      }
+    } catch (error) {
+      setError('Network error. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Create Listing" size="md">
+      <form onSubmit={handleSubmit} className="p-4 space-y-4">
+        {error && (
+          <div className="bg-red-500/20 border border-red-500 text-red-400 px-4 py-2 rounded-xl text-sm">
+            {error}
+          </div>
+        )}
+        
+        <div>
+          <label className="text-gray-400 text-sm block mb-1">Title *</label>
+          <input
+            type="text"
+            value={formData.title}
+            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+            className="w-full bg-gray-700 text-white px-4 py-3 rounded-xl border border-gray-600 focus:border-green-500 focus:outline-none"
+            placeholder="What are you selling?"
+          />
+        </div>
+
+        <div>
+          <label className="text-gray-400 text-sm block mb-1">Price (CAD) *</label>
+          <div className="relative">
+            <DollarSign size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="number"
+              step="0.01"
+              value={formData.price}
+              onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+              className="w-full bg-gray-700 text-white pl-10 pr-4 py-3 rounded-xl border border-gray-600 focus:border-green-500 focus:outline-none"
+              placeholder="0.00"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="text-gray-400 text-sm block mb-1">Category *</label>
+          <select
+            value={formData.category}
+            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+            className="w-full bg-gray-700 text-white px-4 py-3 rounded-xl border border-gray-600 focus:border-green-500 focus:outline-none"
+          >
+            {MARKETPLACE_CATEGORIES.filter(c => c.id !== 'all').map(cat => (
+              <option key={cat.id} value={cat.id}>{cat.label}</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="text-gray-400 text-sm block mb-1">Condition</label>
+          <select
+            value={formData.condition}
+            onChange={(e) => setFormData({ ...formData, condition: e.target.value })}
+            className="w-full bg-gray-700 text-white px-4 py-3 rounded-xl border border-gray-600 focus:border-green-500 focus:outline-none"
+          >
+            {Object.entries(CONDITION_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="text-gray-400 text-sm block mb-1">Description</label>
+          <textarea
+            value={formData.description}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            className="w-full bg-gray-700 text-white px-4 py-3 rounded-xl border border-gray-600 focus:border-green-500 focus:outline-none resize-none h-24"
+            placeholder="Describe your item..."
+          />
+        </div>
+
+        <div>
+          <label className="text-gray-400 text-sm block mb-1">Pickup Location</label>
+          <input
+            type="text"
+            value={formData.pickupLocation}
+            onChange={(e) => setFormData({ ...formData, pickupLocation: e.target.value })}
+            className="w-full bg-gray-700 text-white px-4 py-3 rounded-xl border border-gray-600 focus:border-green-500 focus:outline-none"
+            placeholder="e.g., Library, Student Center"
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="w-full bg-green-600 hover:bg-green-500 text-white py-3 rounded-xl font-semibold transition disabled:opacity-50 flex items-center justify-center"
+        >
+          {isLoading ? <RefreshCw className="animate-spin" size={20} /> : 'Post Listing'}
+        </button>
+      </form>
+    </Modal>
+  );
+};
+
+// Chatbot Component (FR44-47)
+const ChatbotView = ({ authToken, currentUser }) => {
+  const [conversationId, setConversationId] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [inputMessage, setInputMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [suggestions, setSuggestions] = useState([
+    'What events are happening?',
+    'Show me clubs to join',
+    'Browse marketplace'
+  ]);
+
+  const startConversation = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/chatbot/conversations`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setConversationId(data.conversationId);
+      }
+    } catch (error) {
+      console.error('Error starting conversation:', error);
+    }
+  };
+
+  useEffect(() => {
+    startConversation();
+  }, [authToken]);
+
+  const sendMessage = async (messageText) => {
+    if (!messageText.trim() || !conversationId) return;
+
+    const userMessage = { role: 'user', content: messageText };
+    setMessages(prev => [...prev, userMessage]);
+    setInputMessage('');
+    setIsLoading(true);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/chatbot/conversations/${conversationId}/messages`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ message: messageText })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: data.botResponse.content,
+          suggestions: data.botResponse.suggestions,
+          relatedContent: data.botResponse.relatedContent
+        }]);
+        if (data.botResponse.suggestions) {
+          setSuggestions(data.botResponse.suggestions);
+        }
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    sendMessage(inputMessage);
+  };
+
+  return (
+    <div className="flex flex-col h-[calc(100vh-180px)]">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl p-4 mb-4">
+        <div className="flex items-center">
+          <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mr-3">
+            <Bot size={28} className="text-white" />
+          </div>
+          <div>
+            <h2 className="text-white font-bold text-lg">Campus Assistant</h2>
+            <p className="text-purple-200 text-sm">Ask me anything about campus life!</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto space-y-4 mb-4">
+        {messages.length === 0 && (
+          <div className="text-center text-gray-400 py-8">
+            <Bot size={48} className="mx-auto mb-3 opacity-50" />
+            <p>Hi {currentUser?.firstName}! How can I help you today?</p>
+          </div>
+        )}
+        
+        {messages.map((msg, idx) => (
+          <div
+            key={idx}
+            className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+          >
+            <div
+              className={`max-w-[80%] p-4 rounded-2xl ${
+                msg.role === 'user'
+                  ? 'bg-purple-600 text-white rounded-br-md'
+                  : 'bg-gray-800 text-gray-200 rounded-bl-md'
+              }`}
+            >
+              <p className="whitespace-pre-wrap text-sm">{msg.content}</p>
+              
+              {/* Related content chips */}
+              {msg.relatedContent && msg.relatedContent.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {msg.relatedContent.map((item, i) => (
+                    <span
+                      key={i}
+                      className="bg-gray-700 text-purple-400 px-3 py-1 rounded-full text-xs cursor-pointer hover:bg-gray-600"
+                    >
+                      {item.title}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+        
+        {isLoading && (
+          <div className="flex justify-start">
+            <div className="bg-gray-800 p-4 rounded-2xl rounded-bl-md">
+              <div className="flex space-x-2">
+                <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" />
+                <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
+                <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Suggestions */}
+      <div className="flex gap-2 overflow-x-auto pb-2 mb-2">
+        {suggestions.map((suggestion, idx) => (
+          <button
+            key={idx}
+            onClick={() => sendMessage(suggestion)}
+            className="bg-gray-800 text-gray-300 px-4 py-2 rounded-xl text-sm whitespace-nowrap hover:bg-gray-700 transition"
+          >
+            {suggestion}
+          </button>
+        ))}
+      </div>
+
+      {/* Input */}
+      <form onSubmit={handleSubmit} className="flex gap-2">
+        <input
+          type="text"
+          value={inputMessage}
+          onChange={(e) => setInputMessage(e.target.value)}
+          placeholder="Type a message..."
+          className="flex-1 bg-gray-800 text-white px-4 py-3 rounded-xl border border-gray-700 focus:border-purple-500 focus:outline-none"
+        />
+        <button
+          type="submit"
+          disabled={isLoading || !inputMessage.trim()}
+          className="bg-purple-600 hover:bg-purple-500 text-white px-4 rounded-xl transition disabled:opacity-50"
+        >
+          <Send size={20} />
+        </button>
+      </form>
+    </div>
+  );
+};
+
+// User Profile View with Social Graph (FR34-36)
+const UserProfileView = ({ userId, authToken, currentUser, onBack }) => {
+  const [profile, setProfile] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [followers, setFollowers] = useState([]);
+  const [following, setFollowing] = useState([]);
+  const [activeTab, setActiveTab] = useState('about');
+  const [isFollowing, setIsFollowing] = useState(false);
+
+  useEffect(() => {
+    fetchProfile();
+  }, [userId]);
+
+  const fetchProfile = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setProfile(data);
+        setIsFollowing(data.isFollowing);
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleFollow = async () => {
+    try {
+      const method = isFollowing ? 'DELETE' : 'POST';
+      const response = await fetch(`${API_BASE_URL}/users/${userId}/follow`, {
+        method,
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
+      
+      if (response.ok) {
+        setIsFollowing(!isFollowing);
+        setProfile(prev => ({
+          ...prev,
+          followerCount: isFollowing ? prev.followerCount - 1 : prev.followerCount + 1
+        }));
+      }
+    } catch (error) {
+      console.error('Error updating follow status:', error);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <RefreshCw className="animate-spin text-gray-400" size={32} />
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="text-center py-8 text-gray-400">
+        <User size={48} className="mx-auto mb-3 opacity-50" />
+        <p>User not found</p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {/* Profile Header */}
+      <div className="bg-gradient-to-br from-purple-600 via-blue-600 to-orange-500 rounded-2xl p-6 mb-4 text-center">
+        <div className="w-24 h-24 bg-white/20 rounded-2xl flex items-center justify-center text-5xl mx-auto mb-3">
+          {profile.avatarUrl ? (
+            <img src={profile.avatarUrl} alt="" className="w-full h-full rounded-2xl object-cover" />
+          ) : (
+            `${profile.firstName?.[0]}${profile.lastName?.[0]}`
+          )}
+        </div>
+        <h2 className="text-white text-2xl font-bold mb-1">
+          {profile.firstName} {profile.lastName}
+        </h2>
+        {profile.program && (
+          <p className="text-purple-200">{profile.program} • Year {profile.yearOfStudy}</p>
+        )}
+        
+        {/* Stats */}
+        <div className="flex justify-center gap-6 mt-4">
+          <div className="text-center">
+            <p className="text-white font-bold text-xl">{profile.followerCount || 0}</p>
+            <p className="text-purple-200 text-sm">Followers</p>
+          </div>
+          <div className="text-center">
+            <p className="text-white font-bold text-xl">{profile.followingCount || 0}</p>
+            <p className="text-purple-200 text-sm">Following</p>
+          </div>
+        </div>
+
+        {/* Follow Button */}
+        {userId !== currentUser?.id && (
+          <button
+            onClick={handleFollow}
+            className={`mt-4 px-6 py-2 rounded-xl font-semibold transition ${
+              isFollowing
+                ? 'bg-white/20 text-white hover:bg-white/30'
+                : 'bg-white text-purple-600 hover:bg-gray-100'
+            }`}
+          >
+            {isFollowing ? (
+              <span className="flex items-center">
+                <UserCheck size={18} className="mr-2" />
+                Following
+              </span>
+            ) : (
+              <span className="flex items-center">
+                <UserPlus size={18} className="mr-2" />
+                Follow
+              </span>
+            )}
+          </button>
+        )}
+      </div>
+
+      {/* Bio */}
+      {profile.bio && (
+        <div className="bg-gray-800 rounded-xl p-4 mb-4">
+          <p className="text-gray-300">{profile.bio}</p>
+        </div>
+      )}
+
+      {/* Interests */}
+      {profile.interests && profile.interests.length > 0 && (
+        <div className="bg-gray-800 rounded-xl p-4 mb-4">
+          <h3 className="text-white font-semibold mb-3 flex items-center">
+            <Heart size={18} className="mr-2 text-pink-400" />
+            Interests
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            {profile.interests.map(interest => {
+              const tag = INTEREST_TAGS.find(t => t.id === interest);
+              return tag ? (
+                <span key={interest} className="bg-purple-500/20 text-purple-400 px-3 py-1 rounded-full text-sm flex items-center">
+                  <tag.icon size={14} className="mr-1" />
+                  {tag.label}
+                </span>
+              ) : null;
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Contact / Social Links */}
+      {profile.email && (
+        <div className="bg-gray-800 rounded-xl p-4">
+          <h3 className="text-white font-semibold mb-3 flex items-center">
+            <Mail size={18} className="mr-2 text-blue-400" />
+            Contact
+          </h3>
+          <p className="text-gray-400">{profile.email}</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Recommendation Feed Component (FR41-43)
+const RecommendationFeed = ({ authToken, onViewEvent, onRSVP, rsvpedEvents }) => {
+  const [recommendations, setRecommendations] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchRecommendations();
+  }, [authToken]);
+
+  const fetchRecommendations = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(`${API_BASE_URL}/recommendations/events?limit=5`, {
+        headers: { 'Authorization': `Bearer ${authToken}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setRecommendations(data.recommendations || []);
+      }
+    } catch (error) {
+      console.error('Error fetching recommendations:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="bg-gray-800 rounded-xl p-4 animate-pulse">
+        <div className="h-4 bg-gray-700 rounded w-1/3 mb-4"></div>
+        <div className="h-24 bg-gray-700 rounded"></div>
+      </div>
+    );
+  }
+
+  if (recommendations.length === 0) return null;
+
+  return (
+    <div className="mb-6">
+      <h3 className="text-white font-semibold mb-3 flex items-center">
+        <Compass size={20} className="mr-2 text-purple-400" />
+        Recommended for You
+      </h3>
+      <div className="overflow-x-auto">
+        <div className="flex gap-3" style={{ minWidth: 'max-content' }}>
+          {recommendations.map(event => (
+            <div
+              key={event.id}
+              onClick={() => onViewEvent(event)}
+              className="w-64 bg-gradient-to-br from-purple-900/50 to-blue-900/50 rounded-xl p-4 cursor-pointer hover:from-purple-800/50 hover:to-blue-800/50 transition border border-purple-500/20"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-purple-400 text-xs font-medium">
+                  {event.recommendationScore}% Match
+                </span>
+                <span className="bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded text-xs">
+                  {event.category}
+                </span>
+              </div>
+              <h4 className="text-white font-semibold mb-1 line-clamp-1">{event.title}</h4>
+              <p className="text-gray-400 text-sm line-clamp-2 mb-2">{event.description}</p>
+              <div className="flex items-center text-gray-500 text-xs">
+                <Calendar size={12} className="mr-1" />
+                {new Date(event.startTime).toLocaleDateString()}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Splash Screen Component
 const SplashScreen = ({ onComplete }) => {
   const [progress, setProgress] = useState(0);
@@ -1888,8 +2670,8 @@ const BottomNav = ({ activeTab, onTabChange }) => {
   const tabs = [
     { id: 'feed', icon: Home, label: 'Feed' },
     { id: 'events', icon: Calendar, label: 'Events' },
-    { id: 'groups', icon: Users, label: 'Groups' },
-    { id: 'notifications', icon: Bell, label: 'Alerts' },
+    { id: 'marketplace', icon: ShoppingBag, label: 'Market' },
+    { id: 'chat', icon: Bot, label: 'Assistant' },
     { id: 'profile', icon: User, label: 'Profile' }
   ];
   
@@ -2632,6 +3414,14 @@ const ToCampusApp = () => {
       <div className="px-4 py-4 max-w-2xl mx-auto">
         {activeTab === 'feed' && (
           <div>
+            {/* Recommendations Section (FR41-43) */}
+            <RecommendationFeed
+              authToken={authToken}
+              onViewEvent={handleViewEventDetails}
+              onRSVP={handleRSVP}
+              rsvpedEvents={rsvpedEvents}
+            />
+            
             <div className="mb-6">
               <div className="relative">
                 <Search className="absolute left-3 top-3 text-gray-400" size={20} />
@@ -2676,6 +3466,14 @@ const ToCampusApp = () => {
               ))
             )}
           </div>
+        )}
+        
+        {activeTab === 'marketplace' && (
+          <MarketplaceView authToken={authToken} currentUser={currentUser} />
+        )}
+        
+        {activeTab === 'chat' && (
+          <ChatbotView authToken={authToken} currentUser={currentUser} />
         )}
         
         {activeTab === 'events' && (
