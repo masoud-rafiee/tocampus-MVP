@@ -4189,14 +4189,6 @@ const ToCampusApp = () => {
           </div>
         )}
         
-        {activeTab === 'marketplace' && (
-          <MarketplaceView authToken={authToken} currentUser={currentUser} />
-        )}
-        
-        {activeTab === 'chat' && (
-          <ChatbotView authToken={authToken} currentUser={currentUser} />
-        )}
-        
         {activeTab === 'events' && (
           <div>
             {/* Search Bar */}
