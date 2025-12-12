@@ -1,7 +1,7 @@
-# ToCampus API Documentation v2.0
+# ToCampus API Documentation v3.0
 
 ## Overview
-ToCampus API v2.0 implements the complete SRS v3.0 specification for a University Social & Event Platform.
+ToCampus API v3.0 implements the complete SRS v3.0 specification for a University Social & Event Platform. This is a **production-ready** API with 48 RESTful endpoints.
 
 ## Base URL
 - **Development:** `http://localhost:3001/api`

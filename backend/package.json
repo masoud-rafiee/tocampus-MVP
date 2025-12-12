@@ -1,7 +1,7 @@
 {
   "name": "tocampus-backend",
-  "version": "1.0.0",
-  "description": "ToCampus University Social Platform - Backend API",
+  "version": "3.0.0",
+  "description": "ToCampus University Social Platform - Backend API (Production Ready)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

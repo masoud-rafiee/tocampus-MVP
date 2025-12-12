@@ -1,7 +1,7 @@
 {
   "name": "tocampus-frontend",
-  "version": "1.0.0",
-  "description": "ToCampus University Social Platform - React Frontend",
+  "version": "3.0.0",
+  "description": "ToCampus University Social Platform - React Frontend (Production Ready)",
   "private": true,
   "proxy": "http://localhost:3001",
   "dependencies": {

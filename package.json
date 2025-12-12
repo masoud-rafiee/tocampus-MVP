@@ -1,6 +1,6 @@
 {
 	"name": "tocampus-mvp",
-	"version": "1.0.0",
+	"version": "3.0.0",
 	"private": true,
 	"scripts": {
 		"install-all": "npm install --prefix backend && npm install --prefix frontend",

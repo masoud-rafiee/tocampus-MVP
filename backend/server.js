@@ -1,4 +1,14 @@
-// server.js - Main backend entry point
+/**
+ * ToCampus Backend API Server v3.0
+ * 
+ * Production-ready Express.js server implementing SRS v3.0
+ * 48 RESTful endpoints for university social platform
+ * 
+ * @version 3.0.0
+ * @author Masoud Rafiee
+ * @license MIT
+ */
+
 const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');

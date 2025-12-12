@@ -1,3 +1,14 @@
+/**
+ * ToCampus Frontend Application v3.0
+ * 
+ * Production-ready React 18 application implementing SRS v3.0
+ * University social platform with events, groups, marketplace, and more
+ * 
+ * @version 3.0.0
+ * @author Masoud Rafiee
+ * @license MIT
+ */
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
   Calendar, Users, MessageSquare, Bell, Menu, X, Plus, ThumbsUp, MessageCircle, 
