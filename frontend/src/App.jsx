@@ -20,8 +20,9 @@ import {
   Zap, Target, Coffee, Music, Palette,
   Camera, Code, Dumbbell, BookOpen, Mic, Gamepad2, Film, Plane,
   ShoppingBag, DollarSign, Package, Bot, Compass, MoreHorizontal,
-  BellOff, CheckCheck, Volume2, Inbox, Megaphone, Activity, LayoutGrid
+  BellOff, CheckCheck, Volume2, Inbox, Megaphone, Activity, LayoutGrid, CheckSquare
 } from 'lucide-react';
+import AdminApprovalQueue from './components/AdminApprovalQueue';
 
 // API Configuration
 const API_BASE_URL = 'http://localhost:3001/api';
@@ -3389,7 +3390,7 @@ const MobileHeader = ({ title, onMenuClick, showBack, onBack }) => (
   </div>
 );
 
-const BottomNav = ({ activeTab, onTabChange, unreadNotifications = 0 }) => {
+const BottomNav = ({ activeTab, onTabChange, unreadNotifications = 0, currentUser }) => {
   const tabs = [
     { id: 'feed', icon: Home, label: 'Feed' },
     { id: 'events', icon: Calendar, label: 'Events' },
@@ -3397,6 +3398,11 @@ const BottomNav = ({ activeTab, onTabChange, unreadNotifications = 0 }) => {
     { id: 'notifications', icon: Bell, label: 'Alerts', badge: unreadNotifications },
     { id: 'profile', icon: User, label: 'Profile' }
   ];
+  
+  // Add admin tab if user is admin
+  if (currentUser?.role === 'ADMIN') {
+    tabs.push({ id: 'admin', icon: CheckSquare, label: 'Approvals' });
+  }
   
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-xl border-t border-gray-800 shadow-2xl z-50 safe-area-bottom">
@@ -4439,6 +4445,11 @@ const ToCampusApp = () => {
         {activeTab === 'chat' && (
           <ChatbotView authToken={authToken} currentUser={currentUser} />
         )}
+        
+        {/* Admin Approval Queue Tab (FR4, Enhanced) */}
+        {activeTab === 'admin' && currentUser?.role === 'ADMIN' && (
+          <AdminApprovalQueue token={authToken} userRole={currentUser?.role} universityId={currentUser?.universityId} />
+        )}
       </div>
       
       {/* Quick Access Menu Floating Button - only show on main tabs */}
@@ -4462,6 +4473,7 @@ const ToCampusApp = () => {
         activeTab={activeTab} 
         onTabChange={setActiveTab} 
         unreadNotifications={unreadCount}
+        currentUser={currentUser}
       />
     </div>
   );

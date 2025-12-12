@@ -16,6 +16,10 @@ const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 
+// Import services
+const { sendPendingApprovalNotification, sendApprovalNotification, sendRejectionNotification, verifyEmailConfig } = require('./services/emailService');
+const { validateContentPolicy, generateApprovalSummary, generateRejectionReason, createViolationReport } = require('./services/policyValidationService');
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
@@ -838,11 +842,18 @@ app.post('/api/events', authenticateToken, (req, res) => {
     socialShareIds: []
   };
 
+  // ENHANCED: Validate content against university policy
+  const policyValidation = validateContentPolicy(newEvent, 'Event');
+  newEvent.policyValidation = policyValidation;
+  newEvent.violationReport = createViolationReport(newEvent, policyValidation, 'Event');
+
   DB.events.set(eventId, newEvent);
 
   // Create notification for admins about new event pending approval
+  const adminEmails = [];
   for (const user of DB.users.values()) {
     if (user.role === 'ADMIN' && user.universityId === req.user.universityId) {
+      adminEmails.push(user.email);
       const notifId = uuidv4();
       DB.notifications.set(notifId, {
         id: notifId,
@@ -854,6 +865,12 @@ app.post('/api/events', authenticateToken, (req, res) => {
         createdAt: new Date().toISOString()
       });
     }
+  }
+
+  // ENHANCED: Send email notifications to admins
+  if (adminEmails.length > 0) {
+    const adminDashboardUrl = `http://localhost:3000/#/admin/approval`;
+    sendPendingApprovalNotification(adminEmails, 'Event', newEvent.title, adminDashboardUrl);
   }
 
   res.status(201).json(newEvent);
@@ -906,6 +923,13 @@ app.post('/api/events/:id/approve', authenticateToken, (req, res) => {
     createdAt: new Date().toISOString()
   });
 
+  // ENHANCED: Send email notification to event creator
+  const creator = DB.users.get(event.creatorId);
+  if (creator && creator.email) {
+    const creatorName = `${creator.firstName} ${creator.lastName}`;
+    sendApprovalNotification(creator.email, creatorName, 'Event', event.title);
+  }
+
   res.json(event);
 });
 
@@ -922,13 +946,13 @@ app.post('/api/events/:id/reject', authenticateToken, (req, res) => {
     return res.status(404).json({ error: 'Event not found' });
   }
 
-  const { reason } = req.body;
+  const { rejectionReason } = req.body;
 
   event.status = 'REJECTED';
   event.isApproved = false;
   event.rejectedAt = new Date().toISOString();
   event.rejectedBy = req.user.id;
-  event.rejectionReason = reason || 'Violates university policy';
+  event.rejectionReason = rejectionReason || 'Violates university policy';
 
   // Log rejection action in audit log (FR25)
   const auditId = uuidv4();
@@ -940,7 +964,7 @@ app.post('/api/events/:id/reject', authenticateToken, (req, res) => {
     entityType: 'Event',
     entityId: event.id,
     timestamp: new Date().toISOString(),
-    details: { title: event.title, reason: reason || 'Policy violation' }
+    details: { title: event.title, reason: rejectionReason || 'Policy violation' }
   });
 
   // Notify the event creator
@@ -950,10 +974,17 @@ app.post('/api/events/:id/reject', authenticateToken, (req, res) => {
     userId: event.creatorId,
     type: 'EVENT_REJECTED',
     title: '❌ Event Rejected',
-    message: `Your event "${event.title}" was rejected. Reason: ${reason || 'Violates university policy'}`,
+    message: `Your event "${event.title}" was rejected. Reason: ${rejectionReason || 'Violates university policy'}`,
     isRead: false,
     createdAt: new Date().toISOString()
   });
+
+  // ENHANCED: Send email notification to event creator with rejection reason
+  const creator = DB.users.get(event.creatorId);
+  if (creator && creator.email) {
+    const creatorName = `${creator.firstName} ${creator.lastName}`;
+    sendRejectionNotification(creator.email, creatorName, 'Event', event.title, event.rejectionReason);
+  }
 
   res.json(event);
 });
@@ -1293,12 +1324,38 @@ app.post('/api/announcements', authenticateToken, (req, res) => {
     socialShareIds: []
   };
 
+  // ENHANCED: Validate content against university policy
+  const policyValidation = validateContentPolicy(newAnnouncement, 'Announcement');
+  newAnnouncement.policyValidation = policyValidation;
+  newAnnouncement.violationReport = createViolationReport(newAnnouncement, policyValidation, 'Announcement');
+
   DB.announcements.set(announcementId, newAnnouncement);
 
   // Create notifications for users (FR12 - Notification System)
+  // Also notify admins about pending approval
   const author = DB.users.get(req.user.id);
   const authorName = author ? `${author.firstName} ${author.lastName}` : 'Staff';
   
+  const adminEmails = [];
+  
+  // Notify admins about pending announcement
+  for (const user of DB.users.values()) {
+    if (user.role === 'ADMIN' && user.universityId === req.user.universityId) {
+      adminEmails.push(user.email);
+      const notifId = uuidv4();
+      DB.notifications.set(notifId, {
+        id: notifId,
+        userId: user.id,
+        type: 'ANNOUNCEMENT_PENDING',
+        title: '📋 Announcement Pending Approval',
+        message: `New announcement "${newAnnouncement.title || 'Untitled'}" awaits your approval`,
+        relatedId: announcementId,
+        isRead: false,
+        createdAt: new Date().toISOString()
+      });
+    }
+  }
+
   // If group-scoped, notify group members
   if (req.body.groupId) {
     const memberships = Array.from(DB.memberships.values())
@@ -1319,24 +1376,12 @@ app.post('/api/announcements', authenticateToken, (req, res) => {
         });
       }
     });
-  } else {
-    // Global announcement - notify all users at same university
-    const users = Array.from(DB.users.values())
-      .filter(u => u.universityId === req.user.universityId && u.id !== req.user.id);
-    
-    users.forEach(user => {
-      const notifId = uuidv4();
-      DB.notifications.set(notifId, {
-        id: notifId,
-        userId: user.id,
-        type: 'ANNOUNCEMENT',
-        title: 'New Announcement',
-        message: `${authorName} posted: ${newAnnouncement.title || 'New announcement'}`,
-        relatedId: announcementId,
-        isRead: false,
-        createdAt: new Date().toISOString()
-      });
-    });
+  }
+
+  // ENHANCED: Send email notifications to admins
+  if (adminEmails.length > 0) {
+    const adminDashboardUrl = `http://localhost:3000/#/admin/approval`;
+    sendPendingApprovalNotification(adminEmails, 'Announcement', newAnnouncement.title || 'Untitled', adminDashboardUrl);
   }
 
   res.status(201).json(newAnnouncement);
@@ -1389,6 +1434,13 @@ app.post('/api/announcements/:id/approve', authenticateToken, (req, res) => {
     createdAt: new Date().toISOString()
   });
 
+  // ENHANCED: Send email notification to announcement author
+  const author = DB.users.get(announcement.authorId);
+  if (author && author.email) {
+    const authorName = `${author.firstName} ${author.lastName}`;
+    sendApprovalNotification(author.email, authorName, 'Announcement', announcement.title || 'Untitled');
+  }
+
   res.json(announcement);
 });
 
@@ -1405,13 +1457,13 @@ app.post('/api/announcements/:id/reject', authenticateToken, (req, res) => {
     return res.status(404).json({ error: 'Announcement not found' });
   }
 
-  const { reason } = req.body;
+  const { rejectionReason } = req.body;
 
   announcement.status = 'REJECTED';
   announcement.isApproved = false;
   announcement.rejectedAt = new Date().toISOString();
   announcement.rejectedBy = req.user.id;
-  announcement.rejectionReason = reason || 'Violates university policy';
+  announcement.rejectionReason = rejectionReason || 'Violates university policy';
 
   // Log rejection action in audit log (FR25)
   const auditId = uuidv4();
@@ -1423,7 +1475,7 @@ app.post('/api/announcements/:id/reject', authenticateToken, (req, res) => {
     entityType: 'Announcement',
     entityId: announcement.id,
     timestamp: new Date().toISOString(),
-    details: { title: announcement.title, reason: reason || 'Policy violation' }
+    details: { title: announcement.title, reason: rejectionReason || 'Policy violation' }
   });
 
   // Notify the announcement author
@@ -1433,10 +1485,17 @@ app.post('/api/announcements/:id/reject', authenticateToken, (req, res) => {
     userId: announcement.authorId,
     type: 'ANNOUNCEMENT_REJECTED',
     title: '❌ Announcement Rejected',
-    message: `Your announcement "${announcement.title || 'Untitled'}" was rejected. Reason: ${reason || 'Violates university policy'}`,
+    message: `Your announcement "${announcement.title || 'Untitled'}" was rejected. Reason: ${rejectionReason || 'Violates university policy'}`,
     isRead: false,
     createdAt: new Date().toISOString()
   });
+
+  // ENHANCED: Send email notification to announcement author with rejection reason
+  const author = DB.users.get(announcement.authorId);
+  if (author && author.email) {
+    const authorName = `${author.firstName} ${author.lastName}`;
+    sendRejectionNotification(author.email, authorName, 'Announcement', announcement.title || 'Untitled', announcement.rejectionReason);
+  }
 
   res.json(announcement);
 });
