@@ -8,7 +8,7 @@
 ![Tests](https://img.shields.io/badge/Tests-45%20Passing-success?style=flat-square)
 ![SRS](https://img.shields.io/badge/SRS-v3.0%20Complete-orange?style=flat-square)
 ![Status](https://img.shields.io/badge/Status-PRODUCTION%20READY-brightgreen?style=flat-square)
-![Requirements](https://img.shields.io/badge/Requirements-53%2F53%20FR-blue?style=flat-square)
+![Requirements](https://img.shields.io/badge/Requirements-53%2F53%20FR-blue?style=flat-square)   
 
 **Your Campus. Connected. 🎓**
 
