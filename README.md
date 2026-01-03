@@ -385,7 +385,7 @@ This project is part of CS-410 Software Engineering course at Bishop's Universit
 
 ## 👥 Team
 
-**ToCampus Development Team**
+**All done solely by Masoud Rafiee**
 - Software Engineering Project
 
 ---
